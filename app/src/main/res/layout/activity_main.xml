@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/txtStatus"
+        android:text="Tap NFC Card to Read / Write"
+        android:textSize="22sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <EditText
+        android:id="@+id/editMessage"
+        android:hint="Enter text to write to NFC tag"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnWrite"
+        android:text="Write to NFC Tag"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+=
+        <Spinner android:id="@+id/spLocation" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Spinner android:id="@+id/spSublocation" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Spinner android:id="@+id/spProduct" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Spinner android:id="@+id/spVendor" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Spinner android:id="@+id/spDestination" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Spinner android:id="@+id/spRoute" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+</LinearLayout>
