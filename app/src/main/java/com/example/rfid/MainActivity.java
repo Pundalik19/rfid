@@ -1,32 +1,49 @@
 package com.example.rfid;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.PendingIntent;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.MifareClassic;
-import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NfcA;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.Settings;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     TextView txtStatus;
@@ -46,7 +63,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        LinearLayout layoutOwnerBlock = findViewById(R.id.layoutOwnerBlock);
+        Button btnToggle = findViewById(R.id.btnToggleOwner);
 
+        TextView tvTruckNo = findViewById(R.id.tvTruckNo);
+        TextView tvOwnerName = findViewById(R.id.tvOwnerName);
+        TextView tvTareWeight = findViewById(R.id.tvTareWeight);
+
+// Fill details
+        tvTruckNo.setText("Truck No: " );
+        tvOwnerName.setText("Owner: " );
+        tvTareWeight.setText("Tare Weight: " );
+
+// Toggle hide/show
+        btnToggle.setOnClickListener(v -> {
+            if (layoutOwnerBlock.getVisibility() == View.VISIBLE) {
+                layoutOwnerBlock.setVisibility(View.GONE);
+                btnToggle.setText("Show Owner Details");
+            } else {
+                layoutOwnerBlock.setVisibility(View.VISIBLE);
+                btnToggle.setText("Hide Owner Details");
+            }
+        });
 
         txtStatus = findViewById(R.id.txtStatus);
         editMessage = findViewById(R.id.editMessage);
@@ -125,6 +163,44 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
+
+        List<String> apis = new ArrayList<>();
+        apis.add("http://100.168.10.75:8003/api/getassets#asset_masters");
+        apis.add("http://100.168.10.75:8003/api/getlocations#locations");
+        apis.add("http://100.168.10.75:8003/api/getsublocations#sublocations");
+        apis.add("http://100.168.10.75:8003/api/getroutes#route_masters");
+        apis.add("http://100.168.10.75:8003/api/getvendors#vendor_masters");
+
+
+
+        ApiSequenceRunner runner = new ApiSequenceRunner(
+                MainActivity.this,
+                apis,
+                new ApiSequenceRunner.ApiSequenceCallback() {
+
+                    @Override
+                    public void onApiSuccess(String response, String tableName, int index) throws JSONException {
+                        Log.d("SUCCESS", "Index: " + index + " Table: " + tableName);
+                        saveJsonToSQLite(response, tableName);
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        Log.e("API_ERROR", error);
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        Log.d("API", "ALL APIs COMPLETED");
+                    }
+                }
+        );
+
+        try {
+            runner.start();
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -254,7 +330,8 @@ public class MainActivity extends AppCompatActivity {
         }
         return output.toString();
     }
-    private String bytesToHex(byte[] bytes) {
+    private String bytesToHex(byte[] bytes)
+    {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             sb.append(String.format("%02X ", b));
@@ -331,4 +408,99 @@ public class MainActivity extends AppCompatActivity {
         routeList = db.getRoutes(destId);
         spRoute.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, routeList));
     }
+
+    public void saveJsonToSQLite(String json,String tableNm) throws JSONException {
+
+
+        JSONObject root = new JSONObject(json);
+        JSONArray dataArray = root.getJSONArray("data");
+
+        for (int i = 0; i < dataArray.length(); i++) {
+            JSONObject item = dataArray.getJSONObject(i);
+            insertDynamicData(db, tableNm, item);
+        }
+    }
+
+    public void insertDynamicData(dbclass db,
+                                  String tableName,
+                                  JSONObject jsonObject) throws JSONException {
+
+        SQLiteDatabase sqliteDb = db.getdb();
+        ContentValues cv = new ContentValues();
+
+        Iterator<String> keys = jsonObject.keys();
+
+        while (keys.hasNext()) {
+
+            String key = keys.next();
+            String val = jsonObject.optString(key, null);
+
+            if (key.equals("assetId")) {
+                key = "id";
+                byte[] decodedBytes = Base64.decode(val, Base64.DEFAULT);
+                val = new String(decodedBytes);
+            }
+
+            if (key.equals("document_data")) {
+                continue;
+            }
+
+            if (!isColumnExists(sqliteDb, tableName, key)) {
+                Log.w("DB", "Adding missing column: " + key);
+                addColumn(sqliteDb, tableName, key);
+            }
+
+            cv.put(key, val);
+            Log.e("DATA", key + " = " + val);
+        }
+
+        if (!isColumnExists(sqliteDb, tableName, "created_by")) {
+            addColumn(sqliteDb, tableName, "created_by");
+        }
+        if (!isColumnExists(sqliteDb, tableName, "updated_by")) {
+            addColumn(sqliteDb, tableName, "updated_by");
+        }
+
+        cv.put("created_by", 0);
+        cv.put("updated_by", 0);
+
+        sqliteDb.insert(tableName, null, cv);
+    }
+
+    public boolean isColumnExists(SQLiteDatabase db, String tableName, String columnName) {
+
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery(
+                    "PRAGMA table_info(" + tableName + ")",
+                    null
+            );
+
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    String existingColumn = cursor.getString(
+                            cursor.getColumnIndexOrThrow("name")
+                    );
+
+                    if (existingColumn.equalsIgnoreCase(columnName)) {
+                        return true;
+                    }
+                }
+            }
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return false;
+    }
+
+    public void addColumn(SQLiteDatabase db,
+                          String tableName,
+                          String columnName) {
+
+        String sql = "ALTER TABLE " + tableName +
+                " ADD COLUMN " + columnName + " TEXT";
+
+        db.execSQL(sql);
+    }
+
 }

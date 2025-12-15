@@ -39,7 +39,8 @@ public class dbclass extends SQLiteOpenHelper {
         return this.db;
     }
 
-    public List<SpinnerItem> getLocations() {
+    public List<SpinnerItem> getLocations()
+    {
         List<SpinnerItem> list = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
@@ -57,7 +58,7 @@ public class dbclass extends SQLiteOpenHelper {
 
         Cursor c = db.rawQuery(
                 "SELECT id, sublocation_name FROM sublocations",
-                new String[]{String.valueOf(locationId)}
+                null
         );
 
         while (c.moveToNext()) {
@@ -75,8 +76,7 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor c = db.rawQuery(
-                "SELECT id, product_code FROM products",
-                new String[]{String.valueOf(sublocationId)}
+                "SELECT id, product_code FROM products",null
         );
 
         while (c.moveToNext()) {
@@ -94,8 +94,7 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor c = db.rawQuery(
-                "SELECT id, company_name FROM vendor_masters",
-                new String[]{String.valueOf(productId)}
+                "SELECT id, company_name FROM vendor_masters",null
         );
 
         while (c.moveToNext()) {
@@ -113,8 +112,7 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor c = db.rawQuery(
-                "SELECT id, location_name FROM locations",
-                new String[]{String.valueOf(vendorId)}
+                "SELECT id, location_name FROM locations",null
         );
 
         while (c.moveToNext()) {
@@ -132,8 +130,7 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor c = db.rawQuery(
-                "SELECT id, route_code_id,route_name FROM route_masters",
-                new String[]{String.valueOf(destinationId)}
+                "SELECT id, route_code_id,route_name FROM route_masters",null
         );
 
         while (c.moveToNext()) {
