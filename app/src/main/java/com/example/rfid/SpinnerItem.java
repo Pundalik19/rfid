@@ -13,4 +13,5 @@ public class SpinnerItem {
     public String toString() {
         return name;   // Spinner shows only name
     }
+
 }

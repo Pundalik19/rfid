@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".sync">
+
+    <Button
+        android:id="@+id/sync"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="152dp"
+        android:foregroundGravity="center_vertical|center|center_horizontal"
+        android:gravity="center|center_horizontal|center_vertical"
+        android:text="SYNC"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="93dp"
+        tools:ignore="MissingConstraints" />
+
+    <ProgressBar
+        android:id="@+id/syncProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:max="100"
+        tools:ignore="MissingConstraints" />
+
+    <TextView
+        android:id="@+id/syncStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Syncing..."
+        android:visibility="gone"
+        tools:ignore="MissingConstraints" />
+</androidx.constraintlayout.widget.ConstraintLayout>

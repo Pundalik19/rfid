@@ -3,227 +3,82 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="16dp">
-
-    <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp">
-
-    <LinearLayout
-        android:id="@+id/layoutOwnerBlock"
-        android:orientation="vertical"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="12dp"
-        android:background="@android:drawable/dialog_holo_light_frame"
-        android:visibility="gone"
-        android:layout_marginTop="12dp">
-
-        <TextView
-            android:id="@+id/tvTruckNo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Truck No: -"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:padding="4dp"/>
-
-        <TextView
-            android:id="@+id/tvOwnerName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Owner: -"
-            android:textSize="16sp"
-            android:padding="4dp"/>
-
-        <TextView
-            android:id="@+id/tvTareWeight"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tare Weight: -"
-            android:textSize="16sp"
-            android:padding="4dp"/>
-
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/txtStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="Tap Card "
-        android:textSize="22sp"
-        android:visibility="visible" />
-
-    <Button
-        android:id="@+id/btnToggleOwner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Show Owner Details"
-        android:layout_marginTop="10dp"/>
+        android:layout_height="match_parent"
+        android:background="#FFFFFF">
 
 
-    <EditText
-        android:id="@+id/editMessage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter text to write to NFC tag"
-        android:visibility="gone" />
 
-    <Button
-        android:id="@+id/btnWrite"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Write to NFC Tag"
-        android:visibility="gone" />
-
+        `<!-- Top buttons -->
         <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:divider="@android:color/darker_gray"
-            android:showDividers="none"
-            android:dividerPadding="8dp">
-
-            <!-- Location -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Location"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spLocation"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"/>
-
-            <!-- Sublocation -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Sublocation"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spSublocation"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"/>
-
-            <!-- Product -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Product"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spProduct"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"/>
-
-            <!-- Vendor -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Vendor"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spVendor"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"/>
-
-            <!-- Destination -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Destination"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spDestination"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"/>
-
-            <!-- Route -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Route"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
-
-            <Spinner
-                android:id="@+id/spRoute"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@android:drawable/editbox_background"/>
-
-        </LinearLayout>
-        <LinearLayout
+            android:id="@+id/topBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="20dp">
+            android:padding="12dp"
+            android:gravity="end">
 
             <Button
-                android:id="@+id/btnWriteRfid"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="50dp"
-                android:text="Write to RFID"
-                android:textColor="@android:color/white"
-                android:textStyle="bold"
-                android:layout_marginEnd="8dp"/>
+                android:id="@+id/btnSync"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sync" />
 
             <Button
-                android:id="@+id/btnClear"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="50dp"
-                android:text="Clear"
-                android:textColor="@android:color/white"
-                android:textStyle="bold"
-                android:layout_marginStart="8dp"/>
+                android:id="@+id/btnSetup"
+                android:text="Setup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"/>
+
+            <Button
+                android:id="@+id/btnExit"
+                android:text="Exit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"/>
 
         </LinearLayout>
-    </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/background_main"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_below="@id/topBar"
+            android:background="@drawable/_360454"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvTap"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:foregroundGravity="center"
+                android:gravity="center"
+                android:text="TAP RFID CARD ON THE BACK PANEL"
+                android:textColor="#000"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <!-- Overlay card details -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/detailsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+    </RelativeLayout>
 </ScrollView>

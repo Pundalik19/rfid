@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="true" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -20,23 +22,35 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Rfid"
         tools:targetApi="31">
-
-        <activity android:name=".MainActivity"
+        <activity
+            android:name=".activity_login"
+            android:exported="false" />
+        <activity
+            android:name=".sync"
+            android:exported="false" />
+        <activity
+            android:name=".setup"
+            android:exported="false" />
+        <activity
+            android:name=".activity_rfid_tap"
+            android:exported="false"></activity>
+        <activity
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
             <!-- Enable NFC dispatch for reader -->
+
             <intent-filter>
                 <action android:name="android.nfc.action.TAG_DISCOVERED" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-
-
     </application>
 
 </manifest>

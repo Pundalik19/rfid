@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:id="@+id/layoutOwnerBlock"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="@android:drawable/dialog_holo_light_frame"
+            android:visibility="gone"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:id="@+id/tvTruckNo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Truck No: -"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:padding="4dp"/>
+
+            <TextView
+                android:id="@+id/tvOwnerName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Owner: -"
+                android:textSize="16sp"
+                android:padding="4dp"/>
+
+            <TextView
+                android:id="@+id/tvTareWeight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tare Weight: -"
+                android:textSize="16sp"
+                android:padding="4dp"/>
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/txtStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Setup Screen"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:visibility="visible" />
+
+        <Button
+            android:id="@+id/btnToggleOwner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Show Owner Details"
+            android:visibility="gone" />
+
+
+        <EditText
+            android:id="@+id/editMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter text to write to NFC tag"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnWrite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Write to NFC Tag"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:divider="@android:color/darker_gray"
+            android:showDividers="none"
+            android:dividerPadding="8dp">
+
+            <!-- Location -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Location"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <Spinner
+                android:id="@+id/spLocation"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Sublocation -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sublocation"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <Spinner
+                android:id="@+id/spSublocation"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vendor"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Select Vendor">
+
+                <AutoCompleteTextView
+                    android:id="@+id/spVendor"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:focusable="true"
+                    android:clickable="true"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+            <!-- Product -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
+                android:text="Product"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <Spinner
+                android:id="@+id/spProduct"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:drawable/editbox_background"
+                android:visibility="gone" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ore Name"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ore Name">
+                <AutoCompleteTextView
+                    android:id="@+id/spOreName"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:focusable="true"
+                    android:clickable="true"/>
+            </com.google.android.material.textfield.TextInputLayout>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Type"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Type">
+                <AutoCompleteTextView
+                    android:id="@+id/spType"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Size"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Size">
+                <AutoCompleteTextView
+                    android:id="@+id/spSize"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Grade"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Grade">
+                <AutoCompleteTextView
+                    android:id="@+id/spGrade"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Vendor -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Description"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Description">
+                <AutoCompleteTextView
+                    android:id="@+id/spDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Destination -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Destination"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <Spinner
+                android:id="@+id/spDestination"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+
+            <!-- Route -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Route"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:paddingBottom="4dp"/>
+
+            <Spinner
+                android:id="@+id/spRoute"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:drawable/editbox_background"/>
+
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="20dp">
+
+            <Button
+                android:id="@+id/btnWriteRfid"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="50dp"
+                android:text="Setup"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btnClear"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="50dp"
+                android:text="Clear"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
