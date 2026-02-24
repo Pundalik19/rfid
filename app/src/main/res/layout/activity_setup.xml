@@ -283,21 +283,49 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"/>
             </com.google.android.material.textfield.TextInputLayout>
-
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
             <!-- Destination -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
                 android:text="Destination"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:paddingBottom="4dp"/>
+                android:textStyle="bold"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Select destination">
+
+                <AutoCompleteTextView
+                    android:id="@+id/spDestination"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:focusable="true"
+                    android:clickable="true"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"/>
+            <!-- Destination -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
+                android:text="Destination Sublocation"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
 
             <Spinner
-                android:id="@+id/spDestination"
+                android:id="@+id/spDest_subloc"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:background="@android:drawable/editbox_background"/>
+
 
             <View
                 android:layout_width="match_parent"
@@ -329,12 +357,12 @@
             <Button
                 android:id="@+id/btnWriteRfid"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="50dp"
-                android:text="Setup"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Save"
                 android:textColor="@android:color/white"
-                android:textStyle="bold"
-                android:layout_marginEnd="8dp"/>
+                android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnClear"

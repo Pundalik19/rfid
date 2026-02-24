@@ -1,8 +1,11 @@
 package com.example.rfid;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -27,6 +30,10 @@ public class sync extends AppCompatActivity {
     Button syncdata;
     ProgressBar syncProgress;
     TextView syncStatus;
+    View overlay;
+    CardView syncDialog;
+
+    TextView syncSubStatus;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,15 +42,20 @@ public class sync extends AppCompatActivity {
         syncdata = findViewById(R.id.sync);
         syncProgress = findViewById(R.id.syncProgress);
         syncStatus = findViewById(R.id.syncStatus);
+        overlay = findViewById(R.id.overlay);
+        syncDialog = findViewById(R.id.syncDialog);
+        ProgressBar syncProgress = findViewById(R.id.syncProgress);
+        syncStatus = findViewById(R.id.syncStatus);
+        syncSubStatus = findViewById(R.id.syncSubStatus);
         /*syncdata.setOnClickListener(v -> {
 
             List<String> apis = new ArrayList<>();
-            apis.add("http://100.168.10.75:8003/api/getassets#asset_masters");
-            apis.add("http://100.168.10.75:8003/api/getlocations#locations");
-            apis.add("http://100.168.10.75:8003/api/getsublocations#sublocations");
-            apis.add("http://100.168.10.75:8003/api/getroutes#route_masters");
-            apis.add("http://100.168.10.75:8003/api/getvendors#vendor_masters");
-            apis.add("http://100.168.10.75:8003/api/getores#ore_masters");
+            apis.add("http://mssiot.in/vmsb/api/getassets#asset_masters");
+            apis.add("http://mssiot.in/vmsb/api/getlocations#locations");
+            apis.add("http://mssiot.in/vmsb/api/getsublocations#sublocations");
+            apis.add("http://mssiot.in/vmsb/api/getroutes#route_masters");
+            apis.add("http://mssiot.in/vmsb/api/getvendors#vendor_masters");
+            apis.add("http://mssiot.in/vmsb/api/getores#ore_masters");
 
             ApiSequenceRunner runner = new ApiSequenceRunner(
                     sync.this,
@@ -112,19 +124,21 @@ public class sync extends AppCompatActivity {
             }).start();
 
         });*/
+
         syncdata.setOnClickListener(v -> {
 
             syncdata.setEnabled(false);
-            syncProgress.setVisibility(View.VISIBLE);
+            showSyncDialog("Downloading data...");
+            syncProgress.setIndeterminate(false);
             syncProgress.setProgress(0);
 
             List<String> apis = new ArrayList<>();
-            apis.add("http://100.168.10.75:8003/api/getassets#asset_masters");
-            apis.add("http://100.168.10.75:8003/api/getlocations#locations");
-            apis.add("http://100.168.10.75:8003/api/getsublocations#sublocations");
-            apis.add("http://100.168.10.75:8003/api/getroutes#route_masters");
-            apis.add("http://100.168.10.75:8003/api/getvendors#vendor_masters");
-            apis.add("http://100.168.10.75:8003/api/getores#ore_masters");
+            apis.add("http://mssiot.in/vmsb/api/getassets#asset_masters");
+            apis.add("http://mssiot.in/vmsb/api/getlocations#locations");
+            apis.add("http://mssiot.in/vmsb/api/getsublocations#sublocations");
+            apis.add("http://mssiot.in/vmsb/api/getroutes#route_masters");
+            apis.add("http://mssiot.in/vmsb/api/getvendors#vendor_masters");
+            apis.add("http://mssiot.in/vmsb/api/getores#ore_masters");
 
             int totalApis = apis.size();
 
@@ -135,25 +149,33 @@ public class sync extends AppCompatActivity {
 
                         @Override
                         public void onApiSuccess(String response, String tableName, int index) throws JSONException {
+
                             saveJsonToSQLite(response, tableName);
 
-                            int progress = ((index + 1) * 100) / totalApis;
+                            int progress = ((index + 1) * 60) / totalApis; // 0–60% for download
 
-                            runOnUiThread(() -> syncProgress.setProgress(progress));
+                            runOnUiThread(() -> {
+                                syncProgress.setProgress(progress);
+                                syncSubStatus.setText("Downloaded: " + tableName);
+                            });
                         }
 
                         @Override
                         public void onError(String error) {
                             runOnUiThread(() -> {
-                                Toast.makeText(sync.this, "Download failed", Toast.LENGTH_SHORT).show();
-                                syncProgress.setVisibility(View.GONE);
+                                hideSyncDialog();
+                                //Toast.makeText(sync.this, "Download failed", Toast.LENGTH_SHORT).show();
+                                db.showScrollableErrorDialog(sync.this, "Error","Download failed");
                                 syncdata.setEnabled(true);
                             });
                         }
 
                         @Override
                         public void onCompleted() {
-                            runOnUiThread(() -> syncProgress.setProgress(80)); // download done
+                            runOnUiThread(() -> {
+                                syncProgress.setProgress(60);
+                                syncSubStatus.setText("Uploading tripsheets...");
+                            });
 
                             startUpload(); // call upload after download
                         }
@@ -164,8 +186,27 @@ public class sync extends AppCompatActivity {
                 runner.start();
             } catch (JSONException e) {
                 e.printStackTrace();
+                hideSyncDialog();
+                syncdata.setEnabled(true);
             }
         });
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        startActivity(new Intent(this, MainActivity.class));
+        finish();
+    }
+    private void showSyncDialog(String msg) {
+        overlay.setVisibility(View.VISIBLE);
+        syncDialog.setVisibility(View.VISIBLE);
+        syncStatus.setText(msg);
+    }
+
+    private void hideSyncDialog() {
+        overlay.setVisibility(View.GONE);
+        syncDialog.setVisibility(View.GONE);
     }
 
     private void startUpload() {
@@ -177,9 +218,8 @@ public class sync extends AppCompatActivity {
             if (tripsheets.length() == 0) {
                 runOnUiThread(() -> {
                     syncProgress.setProgress(100);
-                    syncProgress.setVisibility(View.GONE);
-                    syncdata.setEnabled(true);
-                    Toast.makeText(this, "Nothing to upload", Toast.LENGTH_SHORT).show();
+                    syncSubStatus.setText("No pending uploads");
+                    finishSync(true);
                 });
                 return;
             }
@@ -189,9 +229,63 @@ public class sync extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (successup) {
                     syncProgress.setProgress(100);
-                    Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show();
+                    syncSubStatus.setText("Upload complete");
+                    finishSync(true);
                 } else {
-                    Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show();
+                    finishSync(false);
+                }
+            });
+
+        }).start();
+    }
+
+    private void finishSync(boolean success) {
+        hideSyncDialog();
+        syncdata.setEnabled(true);
+
+        /*Toast.makeText(
+                this,
+                success ? "Sync completed successfully" : "Sync failed",
+                Toast.LENGTH_SHORT
+        ).show();*/
+
+        String title ="";
+        if(success)
+        {
+            title = "Success";
+        }else
+        {
+            title = "Error";
+        }
+        db.showScrollableErrorDialog(sync.this, title, success ? "Sync completed successfully" : "Sync failed");
+    }
+    private void startUpload2() {
+
+        new Thread(() -> {
+
+            JSONArray tripsheets = db.getTripsheetsForUpload(this);
+
+            if (tripsheets.length() == 0) {
+                runOnUiThread(() -> {
+                    syncProgress.setProgress(100);
+                    syncProgress.setVisibility(View.GONE);
+                    syncdata.setEnabled(true);
+                    //Toast.makeText(this, "Nothing to upload", Toast.LENGTH_SHORT).show();
+                    db.showScrollableErrorDialog(sync.this, "Info","Nothing to upload");
+                });
+                return;
+            }
+
+            boolean successup = db.uploadTripsheets(tripsheets);
+
+            runOnUiThread(() -> {
+                if (successup) {
+                    syncProgress.setProgress(100);
+                    //Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show();
+                    db.showScrollableErrorDialog(sync.this, "Success","Tripsheets uploaded");
+                } else {
+                    //Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show();
+                    db.showScrollableErrorDialog(sync.this, "Error","Upload failed");
                 }
 
                 syncProgress.setVisibility(View.GONE);
