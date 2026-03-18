@@ -47,83 +47,7 @@ public class sync extends AppCompatActivity {
         ProgressBar syncProgress = findViewById(R.id.syncProgress);
         syncStatus = findViewById(R.id.syncStatus);
         syncSubStatus = findViewById(R.id.syncSubStatus);
-        /*syncdata.setOnClickListener(v -> {
 
-            List<String> apis = new ArrayList<>();
-            apis.add("http://mssiot.in/vmsb/api/getassets#asset_masters");
-            apis.add("http://mssiot.in/vmsb/api/getlocations#locations");
-            apis.add("http://mssiot.in/vmsb/api/getsublocations#sublocations");
-            apis.add("http://mssiot.in/vmsb/api/getroutes#route_masters");
-            apis.add("http://mssiot.in/vmsb/api/getvendors#vendor_masters");
-            apis.add("http://mssiot.in/vmsb/api/getores#ore_masters");
-
-            ApiSequenceRunner runner = new ApiSequenceRunner(
-                    sync.this,
-                    apis,
-                    new ApiSequenceRunner.ApiSequenceCallback() {
-
-                        @Override
-                        public void onApiSuccess(String response, String tableName, int index) throws JSONException
-                        {
-                            Log.d("SUCCESS", "Index: " + index + " Table: " + tableName);
-                            saveJsonToSQLite(response, tableName);
-                        }
-
-                        @Override
-                        public void onError(String error) {
-                            Log.e("API_ERROR", error);
-                        }
-
-                        @Override
-                        public void onCompleted() {
-                            Log.d("API", "ALL APIs COMPLETED");
-                        }
-                    }
-            );
-
-            try {
-                runner.start();
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }
-
-            new Thread(() -> {
-
-                JSONArray tripsheets = db.getTripsheetsForUpload(this);
-
-                if (tripsheets.length() == 0) {
-                    Log.d("UPLOAD", "No pending tripsheets");
-                    return;
-                }
-
-                boolean successup = db.uploadTripsheets(tripsheets);
-
-                if (successup) {
-                    List<Long> uploadedIds = new ArrayList<>();
-
-                    for (int i = 0; i < tripsheets.length(); i++) {
-                        try {
-                            uploadedIds.add(tripsheets.getJSONObject(i).getLong("id"));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    db.markTripsheetsUploaded(uploadedIds,this);
-
-                    runOnUiThread(() ->
-                            Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show()
-                    );
-                } else
-                {
-                    runOnUiThread(() ->
-                            Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show()
-                    );
-                }
-
-            }).start();
-
-        });*/
 
         syncdata.setOnClickListener(v -> {
 
@@ -132,64 +56,81 @@ public class sync extends AppCompatActivity {
             syncProgress.setIndeterminate(false);
             syncProgress.setProgress(0);
 
-            List<String> apis = new ArrayList<>();
-            apis.add("http://mssiot.in/vmsb/api/getassets#asset_masters");
-            apis.add("http://mssiot.in/vmsb/api/getlocations#locations");
-            apis.add("http://mssiot.in/vmsb/api/getsublocations#sublocations");
-            apis.add("http://mssiot.in/vmsb/api/getroutes#route_masters");
-            apis.add("http://mssiot.in/vmsb/api/getvendors#vendor_masters");
-            apis.add("http://mssiot.in/vmsb/api/getores#ore_masters");
+            synconlinedatabase(syncProgress,syncdata,sync.this);
+        });
+    }
 
-            int totalApis = apis.size();
+    public void synconlinedatabase(ProgressBar syncProgress,Button syncdata,Context context)
+    {
+        List<String> apis = new ArrayList<>();
+        apis.add(ApiConfig.GET_ASSETS);
+        apis.add(ApiConfig.GET_LOCATIONS);
+        apis.add(ApiConfig.GET_SUBLOCATIONS);
+        apis.add(ApiConfig.GET_ROUTES);
+        apis.add(ApiConfig.GET_VENDORS);
+        apis.add(ApiConfig.GET_ORES);
 
-            ApiSequenceRunner runner = new ApiSequenceRunner(
-                    sync.this,
-                    apis,
-                    new ApiSequenceRunner.ApiSequenceCallback() {
+        int totalApis = apis.size();
 
-                        @Override
-                        public void onApiSuccess(String response, String tableName, int index) throws JSONException {
+        ApiSequenceRunner runner = new ApiSequenceRunner(
+                context,
+                apis,
+                new ApiSequenceRunner.ApiSequenceCallback() {
 
-                            saveJsonToSQLite(response, tableName);
+                    @Override
+                    public void onApiSuccess(String response, String tableName, int index) throws JSONException {
 
-                            int progress = ((index + 1) * 60) / totalApis; // 0–60% for download
+                        saveJsonToSQLite(response, tableName);
 
+                        int progress = ((index + 1) * 60) / totalApis; // 0–60% for download
+
+                        if(syncProgress!= null)
+                        {
                             runOnUiThread(() -> {
                                 syncProgress.setProgress(progress);
                                 syncSubStatus.setText("Downloaded: " + tableName);
                             });
                         }
+                    }
 
-                        @Override
-                        public void onError(String error) {
-                            runOnUiThread(() -> {
-                                hideSyncDialog();
-                                //Toast.makeText(sync.this, "Download failed", Toast.LENGTH_SHORT).show();
-                                db.showScrollableErrorDialog(sync.this, "Error","Download failed");
+                    @Override
+                    public void onError(String error) {
+                        runOnUiThread(() -> {
+                            hideSyncDialog();
+                            //Toast.makeText(sync.this, "Download failed", Toast.LENGTH_SHORT).show();
+                            if(syncProgress!= null)
+                            {
+                                db.showScrollableErrorDialog(context, "Error", "Download failed");
                                 syncdata.setEnabled(true);
-                            });
-                        }
+                            }
+                        });
+                    }
 
-                        @Override
-                        public void onCompleted() {
+                    @Override
+                    public void onCompleted() {
+                        if(syncProgress!= null)
+                        {
                             runOnUiThread(() -> {
                                 syncProgress.setProgress(60);
                                 syncSubStatus.setText("Uploading tripsheets...");
                             });
-
-                            startUpload(); // call upload after download
                         }
-                    }
-            );
 
-            try {
-                runner.start();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                hideSyncDialog();
+                        startUpload(); // call upload after download
+                    }
+                }
+        );
+
+        try {
+            runner.start();
+        } catch (JSONException e) {
+            e.printStackTrace();
+            hideSyncDialog();
+            if(syncProgress!= null)
+            {
                 syncdata.setEnabled(true);
             }
-        });
+        }
     }
 
     @Override

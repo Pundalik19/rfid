@@ -58,6 +58,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -169,14 +171,12 @@ public class MainActivity extends AppCompatActivity {
         hideRunnable = () -> cardDetails.setVisibility(View.GONE);
         detailsContainer = findViewById(R.id.detailsContainer);
 
-
-
         btnSetup.setOnClickListener(v ->
                 startActivity(new Intent(this, activity_login.class)));
         syncbutton.setOnClickListener(v ->
                 startActivity(new Intent(this, sync.class)));
         btnIssuerfid.setOnClickListener(v ->
-                startActivity(new Intent(this, activity_issue_rfid.class)));
+                startActivity(new Intent(this, rfidoops.class)));
 
         btnExit.setOnClickListener(v -> finish());
 
@@ -418,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
                 now =  dbcl.db_format_date_time(new Date());
 
                 pageData = dbcl.readPage(nfca, 14);
-                int tare_wt_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                long tare_wt_sec_card  = Long.parseLong(dbcl.bytesToString(pageData, 0, 4));
                 String tare_wt_time_card;
                 Log.e("tare_wt_sec_card"," "+tare_wt_sec_card);
                 if(tare_wt_sec_card > 0)
@@ -749,7 +749,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("NFC_READ", "25 : puc_val_seconds "+puc_val_seconds+" puc_validity"+puc_validity);
 
                     nfca.close();
-                    //error="";
+                    error="";
                     if(!"".equals(error))
                     {
                         //background_main.setBackgroundColor(Color.RED);

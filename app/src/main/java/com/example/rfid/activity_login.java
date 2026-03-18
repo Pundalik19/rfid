@@ -116,7 +116,7 @@ public class activity_login extends AppCompatActivity {
 
     private void authenticateFromServer(String username, String password) {
 
-        String url = "http://mssiot.in/vmsb/api/mobilelogin";
+        String url = ApiConfig.MOBILE_LOGIN;
 
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> {

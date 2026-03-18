@@ -23,9 +23,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Rfid"
         tools:targetApi="31">
-        <activity
-            android:name=".activity_issue_rfid"
-            android:exported="false" />
+
         <activity
             android:name=".activity_login"
             android:exported="false" />
@@ -47,11 +45,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Enable NFC dispatch for reader -->
-
             <intent-filter>
                 <action android:name="android.nfc.action.TAG_DISCOVERED" />
 
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".rfidoops"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".rfid_issue"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

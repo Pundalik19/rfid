@@ -5,14 +5,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.nfc.Tag;
-import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.NfcA;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,7 +24,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
@@ -42,6 +39,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +48,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -399,6 +398,62 @@ public class dbclass extends SQLiteOpenHelper {
         return name;
     }
 
+    public String get_ore_name(int id) {
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        String name = "0";
+
+        Cursor cursor = db.rawQuery(
+                "SELECT name,type,size,grade FROM ore_masters WHERE id = ?",
+                new String[]{String.valueOf(id)}
+        );
+
+        if (cursor.moveToFirst()) {
+            name = cursor.getString(0)+"-"+cursor.getString(1)+"-"+cursor.getString(2)+"-"+cursor.getString(3);
+
+        }
+        Log.e("route_name",name+" ");
+        cursor.close();
+        return name;
+    }
+    public String get_vendor_name(int id) {
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        String name = "0";
+
+        Cursor cursor = db.rawQuery(
+                "SELECT company_name FROM vendor_masters WHERE id = ?",
+                new String[]{String.valueOf(id)}
+        );
+
+        if (cursor.moveToFirst()) {
+            name = cursor.getString(0);
+
+        }
+        Log.e("route_name",name+" ");
+        cursor.close();
+        return name;
+    }
+
+    public String get_mob_name(int id) {
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        String name = "0";
+
+        Cursor cursor = db.rawQuery(
+                "SELECT login FROM mobile_logins WHERE id = ?",
+                new String[]{String.valueOf(id)}
+        );
+
+        if (cursor.moveToFirst()) {
+            name = cursor.getString(0);
+
+        }
+        Log.e("route_name",name+" ");
+        cursor.close();
+        return name;
+    }
+
     public String get_subloc_name(int id) {
 
         SQLiteDatabase db = this.getReadableDatabase();
@@ -439,7 +494,7 @@ public class dbclass extends SQLiteOpenHelper {
         HttpURLConnection conn = null;
         Log.e("uploadTripsheets","uploadTripsheets");
         try {
-            URL url = new URL("http://mssiot.in/vmsb/api/tripsheet/save");
+            URL url = new URL(ApiConfig.TRIPSHEET_SAVE);
             conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("POST");
@@ -618,6 +673,15 @@ public class dbclass extends SQLiteOpenHelper {
 
     }
 
+    public static String base64Decode(String base64) {
+        if (base64 != null && !base64.isEmpty()) {
+            byte[] decoded = Base64.decode(base64, Base64.NO_WRAP);
+            return new String(decoded, StandardCharsets.UTF_8);
+        } else {
+            return "";
+        }
+    }
+
     public static void showScrollableErrorDialog(Context context, String title, String message) {
 
         if (currentDialog != null && currentDialog.isShowing()) {
@@ -678,7 +742,33 @@ public class dbclass extends SQLiteOpenHelper {
         return diffMillis / 1000; // seconds
     }
 
+    public static String secondsFromTargetDate(String dbDateTime) throws ParseException {
+
+        if(!"null".equals(dbDateTime) && dbDateTime != null)
+        {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            sdf.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+
+            Date targetDate = sdf.parse(dbDateTime);
+
+            Calendar baseCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
+            baseCal.set(2026, Calendar.JANUARY, 1, 0, 0, 0);
+
+            baseCal.set(Calendar.MILLISECOND, 0);
+
+            long baseMillis = baseCal.getTimeInMillis();
+            long targetMillis = targetDate.getTime();
+
+            return String.valueOf(TimeUnit.MILLISECONDS.toSeconds(targetMillis - baseMillis));
+        }else
+        {
+            return "0";
+        }
+    }
+
     public boolean writeStringToTag(Tag tag, String text, int page, int strtype) {
+
+        Log.e("writeStringToTag",text+" ");
         NfcA nfcA = NfcA.get(tag);
 
         try {
@@ -817,6 +907,31 @@ public class dbclass extends SQLiteOpenHelper {
         return new Date(targetMillis);
     }
 
+    public static int daysFromBaseDateInt(String dbDateTime) throws ParseException {
+
+        Log.e("daysFromBaseDateInt",dbDateTime+" ");
+
+        if (dbDateTime == null || dbDateTime.trim().isEmpty()) {
+            return 0;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        sdf.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+
+        Date targetDate = sdf.parse(dbDateTime);
+
+        Calendar baseCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
+        baseCal.set(2026, Calendar.JANUARY, 1, 0, 0, 0);
+        baseCal.set(Calendar.MILLISECOND, 0);
+
+        long baseMillis = baseCal.getTimeInMillis();
+        long targetMillis = targetDate.getTime();
+
+        long diffMillis = targetMillis - baseMillis;
+
+        return (int) TimeUnit.MILLISECONDS.toDays(diffMillis);
+    }
+
     public static Date date_time_FromSeconds(long seconds) {
 
         Calendar baseCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
@@ -838,8 +953,21 @@ public class dbclass extends SQLiteOpenHelper {
         Log.e("bytesToString"," "+value);
         return String.valueOf(value);
     }
-    public static byte[] stringTo2Bytes(String value) {
+    public static byte[] stringTo1Bytes(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            value = "0";
+        }
+        long seconds = Long.parseLong(value); // decimal conversion
 
+        byte[] data = new byte[1];
+        data[0] = (byte) (seconds & 0xFF);
+
+        return data;
+    }
+    public static byte[] stringTo2Bytes(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            value = "0";
+        }
         long seconds = Long.parseLong(value); // decimal conversion
 
         byte[] data = new byte[2];
@@ -848,8 +976,24 @@ public class dbclass extends SQLiteOpenHelper {
 
         return data;
     }
-    public static byte[] stringTo4Bytes(String value) {
 
+    public static byte[] stringTo3Bytes(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            value = "0";
+        }
+        long seconds = Long.parseLong(value); // decimal conversion
+
+        byte[] data = new byte[3];
+        data[0] = (byte) ((seconds >> 16) & 0xFF);
+        data[1] = (byte) ((seconds >> 8) & 0xFF);
+        data[2] = (byte) (seconds & 0xFF);
+
+        return data;
+    }
+    public static byte[] stringTo4Bytes(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            value = "0";
+        }
         long seconds = Long.parseLong(value); // decimal conversion
 
         byte[] data = new byte[4];
@@ -1014,11 +1158,24 @@ public class dbclass extends SQLiteOpenHelper {
 
     public String display_format_date_time(Date date)
     {
-        return new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault()).format(date);
+        if(date!=null)
+        {
+            return new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault()).format(date);
+        }else
+        {
+            return "";
+        }
     }
 
     public String display_format_date(Date date)
     {
-        return new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(date);
+        if(date!=null)
+        {
+            return new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(date);
+        }else
+        {
+            return "";
+        }
+
     }
 }
