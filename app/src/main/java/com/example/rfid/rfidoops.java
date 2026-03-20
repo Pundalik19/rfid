@@ -25,7 +25,9 @@ import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -71,18 +73,21 @@ public class rfidoops extends AppCompatActivity {
     LinearLayout detailsContainer;
 
     private static AlertDialog currentDialog;
-    Button btnRead, btnClear, btnIssue;
+    Button btnRead, btnClear, btnIssue,btnSetup;
     TextView txtData;
 
     Tag currentTag;
-
+    private boolean isReadMode = false;
+    private ProgressBar loadingBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rfidoops);
+        loadingBar = findViewById(R.id.loadingBar);
         btnRead = findViewById(R.id.btnRead);
         btnClear = findViewById(R.id.btnClear);
         btnIssue = findViewById(R.id.btnIssue);
+        btnSetup = findViewById(R.id.btnSetup);
         txtData = findViewById(R.id.txtData);
         detailsContainer = findViewById(R.id.detailsCo);
         cardDetails = findViewById(R.id.cardDetails);
@@ -107,13 +112,34 @@ public class rfidoops extends AppCompatActivity {
         }
 
         btnRead.setOnClickListener(v -> {
+
             txtData.setText("Tap card to read...");
+
+            detailsContainer.removeAllViews();
+            isReadMode = true;   // enable reading
         });
 
         btnClear.setOnClickListener(v -> {
+            isReadMode = false;  // disable reading
+            detailsContainer.removeAllViews();
             if(currentTag != null){
-                clearCard(currentTag);
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Confirm")
+                        .setMessage("Are you sure you want to clear this card?")
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            clearCard(currentTag); // proceed
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            dialog.dismiss(); // cancel
+                        })
+                        .show();
             }
+        });
+
+        btnSetup.setOnClickListener(v -> {
+            Intent i = new Intent(this, setup.class);
+            startActivity(i);
         });
 
         btnIssue.setOnClickListener(v -> {
@@ -150,10 +176,16 @@ public class rfidoops extends AppCompatActivity {
 
         Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 
-        if(tag != null){
+        if (tag != null) {
             currentTag = tag;
-            readCard(tag);
-            btnClear.setEnabled(true);
+            if (isReadMode) {
+                readCard(tag);   // ✅ read only when button pressed
+                isReadMode = false; // reset after reading (optional)
+                btnClear.setEnabled(true);
+            } else {
+                // ❌ ignore scan if not in read mode
+                Toast.makeText(this, "Press READ button first", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -209,6 +241,8 @@ public class rfidoops extends AppCompatActivity {
             pageData = dbcl.readPage(nfca, 13);
             int asset_type = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
             int gross_wt_capacity = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+
+            Log.d("NFC_READ", "11 : gross_wt_capacity"+gross_wt_capacity+" ");
 
             String asset_type_display="";
             if(asset_type==1)
@@ -500,32 +534,44 @@ public class rfidoops extends AppCompatActivity {
     }
 
     private void clearCard(Tag tag){
-
+        loadingBar.setVisibility(View.VISIBLE);
+        txtData.setText("Clearing card...");
+        new Thread(() ->
+        {
         try{
 
-            NfcA nfca = NfcA.get(tag);
-            nfca.connect();
+                NfcA nfca = NfcA.get(tag);
+                nfca.connect();
 
-            for(int page=4; page<=37; page++){
+                for(int page=4; page<=37; page++){
 
-                byte[] cmd = new byte[]{
-                        (byte)0xA2,
-                        (byte)page,
-                        0x00,
-                        0x00,
-                        0x00,
-                        0x00
-                };
+                    byte[] cmd = new byte[]{
+                            (byte)0xA2,
+                            (byte)page,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00
+                    };
 
-                nfca.transceive(cmd);
+                    nfca.transceive(cmd);
+                }
+
+                nfca.close();
+                runOnUiThread(() -> {
+                    loadingBar.setVisibility(View.GONE);
+                    txtData.setText("✅ Card Cleared");
+                });
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+
+                runOnUiThread(() -> {
+                    loadingBar.setVisibility(View.GONE);
+                    txtData.setText("❌ Error clearing card");
+                });
             }
-
-            nfca.close();
-
-            txtData.setText("Card Cleared");
-
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+        }).start();
     }
 }

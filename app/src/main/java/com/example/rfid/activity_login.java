@@ -96,7 +96,7 @@ public class activity_login extends AppCompatActivity {
         setLoading(true);
 
         if (isMobileLoginValid(username, password)) {
-            startActivity(new Intent(this, setup.class));
+            startActivity(new Intent(this, rfidoops.class));
             finish();
         } else {
             authenticateFromServer(username, password);

@@ -207,7 +207,7 @@ public class rfid_issue extends AppCompatActivity {
             a.tare_weight_time = o.optString("tare_weight_time", "");
             a.hsd = o.getDouble("hsd_balance");
             a.gross_weight_capacity = o.optInt("gross_weight_capacity");
-
+            Log.e("gross_weight_capacity","get "+a.gross_weight_capacity);
             JSONArray docs = o.optJSONArray("document_data");
 
             if (docs != null) {
@@ -395,15 +395,18 @@ public class rfid_issue extends AppCompatActivity {
                 {
                     String asset = selectedAsset.registration_no;
                     String assetId = selectedAsset.assetId;
+
+                    Log.e("assetId",assetId+" "+selectedAsset.gross_weight_capacity);
+
                     int vendor_id = selectedAsset.vendor_id;
                     int status = 1;
                     int asset_type = 0;
                     if ("TRUCK".equals(selectedAsset.assetType)) {
-                        asset_type = 1;
+                        asset_type = 01;
                     } else if ("MACHINE".equals(selectedAsset.assetType)) {
-                        asset_type = 2;
+                        asset_type = 02;
                     } else if ("BARGE".equals(selectedAsset.assetType)) {
-                        asset_type = 3;
+                        asset_type = 03;
                     }
 
                     int hsdval = (int) (selectedAsset.hsd * 100);
