@@ -19,12 +19,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AnimationUtils;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -47,6 +49,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -60,21 +63,28 @@ public class dbclass extends SQLiteOpenHelper {
     SQLiteDatabase db = getWritableDatabase();
     private static AlertDialog currentDialog;
     public dbclass(@Nullable Context context) {
-        super(context, "vmsb.db", null, 3);
+        super(context, "vmsb.db", null, 11);
     }
 
     @Override
     public void onCreate(SQLiteDatabase db)
     {
-        db.execSQL("CREATE TABLE IF NOT EXISTS tripsheets (id INTEGER PRIMARY KEY AUTOINCREMENT,trip_type  NOT NULL, tripsheet_no TEXT NOT NULL UNIQUE, initial_route_id INTEGER NOT NULL, final_route_id INTEGER NOT NULL, rfid_id TEXT, truck_id INTEGER NOT NULL, truck_no TEXT, vendor_id INTEGER, src_time TEXT, src_mobile TEXT, wb_src_time TEXT, wb_src_gross_login INTEGER, src_tare_wt_time TEXT, wb_src_tare_login INTEGER, wb_dest_time TEXT, wb_dest_gross_login INTEGER, dest_time TEXT, dest_mobile TEXT, dest_tare_wt_time TEXT, wb_dest_tare_login INTEGER, src_gross_wt INTEGER, src_tare_wt INTEGER, src_net_wt INTEGER, dest_gross_wt INTEGER, dest_tare_wt INTEGER, dest_net_wt INTEGER, approved_by INTEGER, approved_on TEXT, ore_id INTEGER, status TEXT, created_at TEXT, updated_at TEXT,POS_UP_BIT INTEGER DEFAULT 1,asset_code TEXT DEFAULT NULL,truck_vendor_id INTEGER DEFAULT NULL,hsd_bal DECIMAL(7,2));");
+        db.execSQL("CREATE TABLE IF NOT EXISTS tripsheets (id INTEGER PRIMARY KEY AUTOINCREMENT,trip_type  NOT NULL, tripsheet_no TEXT NOT NULL UNIQUE, initial_route_id INTEGER NOT NULL, final_route_id INTEGER NOT NULL, rfid_id TEXT, truck_id INTEGER NOT NULL, truck_no TEXT, vendor_id INTEGER, src_time TEXT, src_mobile TEXT, wb_src_time TEXT, wb_src_gross_login INTEGER, src_tare_wt_time TEXT, wb_src_tare_login INTEGER, wb_dest_time TEXT, wb_dest_gross_login INTEGER, dest_time TEXT, dest_mobile TEXT, dest_tare_wt_time TEXT, wb_dest_tare_login INTEGER, src_gross_wt INTEGER, src_tare_wt INTEGER, src_net_wt INTEGER, dest_gross_wt INTEGER, dest_tare_wt INTEGER, dest_net_wt INTEGER, approved_by INTEGER, approved_on TEXT, ore_id INTEGER, status TEXT, created_at TEXT, updated_at TEXT,POS_UP_BIT INTEGER DEFAULT 1,asset_code TEXT DEFAULT NULL,machine_id  TEXT DEFAULT 0,screening_plant_id TEXT DEFAULT 0,plant_input_product_id TEXT DEFAULT 0,truck_vendor_id INTEGER DEFAULT NULL,hsd_bal DECIMAL(7,2));");
         db.execSQL("CREATE TABLE IF NOT EXISTS asset_masters (id INTEGER PRIMARY KEY AUTOINCREMENT, registration_no TEXT NOT NULL, asset_code TEXT, asset_type TEXT NOT NULL, owner_name TEXT NOT NULL, owner_contact TEXT NOT NULL, rc_file TEXT, vendor_id INTEGER NOT NULL, group_code TEXT, tare_weight INTEGER, tare_weight_wb INTEGER, tare_weight_time TEXT, gross_weight_capacity INTEGER NOT NULL, hsd_balance REAL NOT NULL DEFAULT 0.00, retention_amt_perc REAL NOT NULL DEFAULT 0.00, retention_max_amt REAL, created_by INTEGER NOT NULL, updated_by INTEGER NOT NULL, created_at TEXT, updated_at TEXT);");
         db.execSQL("CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY AUTOINCREMENT, location_name TEXT NOT NULL, address TEXT, type TEXT, location TEXT, radius REAL, colour TEXT DEFAULT '#FF0000', fill_colour TEXT DEFAULT '#FB6B72', opacity TEXT DEFAULT '0.5', created_by INTEGER, updated_by INTEGER);");
         db.execSQL("CREATE TABLE IF NOT EXISTS route_masters (id INTEGER PRIMARY KEY AUTOINCREMENT, route_code_id INTEGER NOT NULL, route_name TEXT NOT NULL, source_sublocation INTEGER NOT NULL, destination_sublocation INTEGER NOT NULL, distance INTEGER NOT NULL, trip_time_min INTEGER NOT NULL, load_capacity INTEGER NOT NULL, created_by INTEGER NOT NULL, updated_by INTEGER, created_at TEXT, updated_at TEXT);");
         db.execSQL("CREATE TABLE IF NOT EXISTS sublocations (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER NOT NULL, sublocation_name TEXT NOT NULL, point TEXT, created_by INTEGER NOT NULL, updated_by INTEGER, created_at TEXT, updated_at TEXT);");
         db.execSQL("CREATE TABLE IF NOT EXISTS vendor_masters (id INTEGER PRIMARY KEY AUTOINCREMENT, vendor_id TEXT NOT NULL, company_name TEXT NOT NULL, address TEXT, mobile TEXT, email TEXT, bank_ac_no TEXT, bank_ac_type TEXT, bank_IFSC_code TEXT, pan_no TEXT, gst_no TEXT, status INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT);");
         db.execSQL("CREATE TABLE IF NOT EXISTS ore_masters (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL, size TEXT NOT NULL, grade TEXT NOT NULL, description TEXT NOT NULL, created_by INTEGER NOT NULL, updated_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
-        db.execSQL("CREATE TABLE IF NOT EXISTS setup_data (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER NOT NULL, sublocation_id INTEGER NOT NULL, vendor_id INTEGER NOT NULL, ore_id INTEGER NOT NULL, type_id INTEGER NOT NULL, size_id INTEGER NOT NULL, grade_id INTEGER NOT NULL, description_id INTEGER NOT NULL, destination_id INTEGER NOT NULL, route_id INTEGER NOT NULL,dest_subloc_id INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT,POS_UP_BIT INTEGER DEFAULT 1);");
-        db.execSQL("CREATE TABLE IF NOT EXISTS mobile_logins (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT NOT NULL UNIQUE, password TEXT NOT NULL, u_id TEXT UNIQUE, location_id INTEGER NOT NULL, status INTEGER NOT NULL DEFAULT 1, version TEXT, created_by INTEGER, updated_by INTEGER, created_at TEXT, updated_at TEXT);");
+        db.execSQL("CREATE TABLE IF NOT EXISTS setup_data (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER NOT NULL, sublocation_id INTEGER NOT NULL, vendor_id INTEGER NOT NULL, ore_id INTEGER NOT NULL, type_id INTEGER NOT NULL, size_id INTEGER NOT NULL, grade_id INTEGER NOT NULL, description_id INTEGER NOT NULL, destination_id INTEGER NOT NULL, route_id INTEGER NOT NULL,dest_subloc_id INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT,POS_UP_BIT INTEGER DEFAULT 1,old_route_id INTEGER,new_route1_id INTEGER,new_route2_id INTEGER,new_route3_id INTEGER,new_route4_id INTEGER,updated_date_time TEXT);");
+        db.execSQL("CREATE TABLE IF NOT EXISTS mobile_logins (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT NOT NULL UNIQUE, password TEXT NOT NULL, u_id TEXT UNIQUE, location_id INTEGER NOT NULL, int_tare_validity_days INTEGER NOT NULL, ext_tare_validity_days INTEGER NOT NULL, status INTEGER NOT NULL DEFAULT 1, version TEXT, created_by INTEGER, updated_by INTEGER, created_at TEXT, updated_at TEXT);");
+        db.execSQL("CREATE TABLE IF NOT EXISTS machinery (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, sublocation_id INTEGER, src_mobile INTEGER, date_time TEXT, registration_no TEXT, machine_id INTEGER, pos_up_bit INTEGER DEFAULT 1)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS machineWorkingdetails (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, registration_no INTEGER, asset_id INTEGER)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS machineWorkingdetails (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, registration_no INTEGER, asset_id INTEGER)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS screening_plant (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,machine_working_id INTEGER,ore_id INTEGER,operation_date_time TEXT,pos_up_bit INTEGER DEFAULT 1)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS bowser_stock (id INTEGER PRIMARY KEY AUTOINCREMENT,sublocation_id TEXT,bowser_id TEXT,qty DECIMAL(10,2), date_time TEXT, updated_time DATETIME  DEFAULT NULL, pos_up_bit INTEGER DEFAULT 1 )");
+        db.execSQL("CREATE TABLE IF NOT EXISTS hsd_transfer (id INTEGER PRIMARY KEY AUTOINCREMENT,sublocation_id TEXT,bowser_id TEXT,qty DECIMAL(10,2), date_time TEXT,asset_id,stock_id, updated_time DATETIME DEFAULT NULL, pos_up_bit INTEGER DEFAULT 1 )");
+        db.execSQL("CREATE TABLE IF NOT EXISTS hsd_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id INTEGER NOT NULL,bowser_stock_id INTEGER NOT NULL,qty TEXT,balance_qty TEXT,datetime DATETIME DEFAULT CURRENT_TIMESTAMP,pos_up_bit INTEGER DEFAULT 1,pos_up_at DATETIME DEFAULT NULL)");
 
     }
 
@@ -109,6 +119,123 @@ public class dbclass extends SQLiteOpenHelper {
                         "ALTER TABLE setup_data ADD COLUMN dest_subloc_id INTEGER NOT NULL DEFAULT 0"
                 );
 
+
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 4) {
+
+            db.beginTransaction();
+            try {
+                db.execSQL(
+                        "CREATE TABLE  IF NOT EXISTS  machinery (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, sublocation_id INTEGER, src_mobile INTEGER, date_time TEXT, registration_no TEXT, pos_up_bit INTEGER DEFAULT 1)"
+                );
+
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 5) {
+
+            db.beginTransaction();
+            try {
+
+                db.execSQL(
+                        "ALTER TABLE machinery ADD COLUMN machine_id INTEGER NOT NULL DEFAULT 0"
+                );
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 6) {
+
+            db.beginTransaction();
+            try {
+                db.execSQL(
+                        "ALTER TABLE tripsheets ADD COLUMN machine_id TEXT NOT NULL DEFAULT 0"
+                );
+
+                db.execSQL(
+                        "ALTER TABLE tripsheets ADD COLUMN screening_plant_id TEXT DEFAULT 0"
+                );
+
+                db.execSQL(
+                        "ALTER TABLE tripsheets ADD COLUMN plant_input_product_id TEXT DEFAULT 0"
+                );
+
+                db.execSQL(
+                        "ALTER TABLE mobile_logins ADD COLUMN int_tare_validity_days INTEGER DEFAULT NULL"
+                );
+
+                db.execSQL(
+                        "ALTER TABLE mobile_logins ADD COLUMN ext_tare_validity_days  INTEGER DEFAULT NULL"
+                );
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 7)
+        {
+            db.beginTransaction();
+            try {
+                db.execSQL("CREATE TABLE IF NOT EXISTS machineWorkingdetails (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, registration_no INTEGER, asset_id INTEGER)");
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 8)
+        {
+            db.beginTransaction();
+            try {
+                db.execSQL("CREATE TABLE IF NOT EXISTS screening_plant (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,machine_working_id INTEGER,ore_id INTEGER,operation_date_time TEXT,pos_up_bit INTEGER DEFAULT 1)");
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+
+        if (oldVersion < 9)
+        {
+            db.beginTransaction();
+            try {
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN old_route_id INTEGER");
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN new_route1_id INTEGER");
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN new_route2_id INTEGER");
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN new_route3_id INTEGER");
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN new_route4_id INTEGER");
+                db.execSQL("ALTER TABLE setup_data ADD COLUMN updated_date_time TEXT");
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+
+        if (oldVersion < 10)
+        {
+            db.beginTransaction();
+            try {
+                db.execSQL("CREATE TABLE IF NOT EXISTS bowser_stock (id INTEGER PRIMARY KEY AUTOINCREMENT,sublocation_id TEXT,bowser_id TEXT,qty DECIMAL(10,2), date_time TEXT, updated_time DATETIME  DEFAULT NULL, pos_up_bit INTEGER DEFAULT 1 )");
+                db.execSQL("CREATE TABLE IF NOT EXISTS hsd_transfer (id INTEGER PRIMARY KEY AUTOINCREMENT,sublocation_id TEXT,bowser_id TEXT,qty DECIMAL(10,2), date_time TEXT,asset_id,stock_id, updated_time DATETIME DEFAULT NULL, pos_up_bit INTEGER DEFAULT 1 )");
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
+        if (oldVersion < 11)
+        {
+            db.beginTransaction();
+            try {
+                db.execSQL("CREATE TABLE IF NOT EXISTS hsd_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id INTEGER NOT NULL,bowser_stock_id INTEGER NOT NULL,qty TEXT,balance_qty TEXT,datetime DATETIME DEFAULT CURRENT_TIMESTAMP,pos_up_bit INTEGER DEFAULT 1,pos_up_at DATETIME DEFAULT NULL)");
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
@@ -143,6 +270,27 @@ public class dbclass extends SQLiteOpenHelper {
         return list;
     }
 
+    public List<SpinnerItem> get_screening_plant_machine(String loc)
+    {
+        List<SpinnerItem> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "";
+        if(!loc.isEmpty())
+        {
+            query = "WHERE id='"+loc+"'";
+        }
+
+        Log.e("query"," "+query);
+
+        Cursor c = db.rawQuery("SELECT id, registration_no FROM machineWorkingdetails "+query, null);
+        while (c.moveToNext()) {
+            list.add(new SpinnerItem(c.getInt(0), c.getString(1)));
+            Log.e("query"," "+c.getString(1));
+        }
+        c.close();
+        return list;
+    }
     public List<SpinnerItem> getSublocations(int locationId) {
         List<SpinnerItem> list = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
@@ -234,6 +382,42 @@ public class dbclass extends SQLiteOpenHelper {
         return list;
     }
 
+    public List<SpinnerItem> getoldroutes(String mobile_destination_id) {
+        List<SpinnerItem> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor c = db.rawQuery(
+                "select r.id,r.route_name from route_masters r left join sublocations s on r.destination_sublocation=s.id where s.location_id=?",new String[]{mobile_destination_id}
+        );
+
+        while (c.moveToNext()) {
+            list.add(new SpinnerItem(
+                    c.getInt(0),        // id
+                    c.getString(1)      // route name
+            ));
+        }
+        c.close();
+        return list;
+    }
+
+    public List<SpinnerItem> get_new_routes(String mobile_location_id,String old_route_id) {
+        List<SpinnerItem> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor c = db.rawQuery(
+                "SELECT r.id,r.route_name FROM route_masters r JOIN route_masters old ON old.id = ? LEFT JOIN sublocations s on r.destination_sublocation=s.id WHERE r.source_sublocation = old.source_sublocation AND s.location_id = ?;",new String[]{old_route_id,mobile_location_id}
+        );
+
+        while (c.moveToNext()) {
+            list.add(new SpinnerItem(
+                    c.getInt(0),        // id
+                    c.getString(1)      // route name
+            ));
+        }
+        c.close();
+        return list;
+    }
+
     public List<SpinnerItem> getOreNames() {
         List<SpinnerItem> list = new ArrayList<>();
         Log.e("","SELECT DISTINCT name FROM ore_masters");
@@ -307,7 +491,7 @@ public class dbclass extends SQLiteOpenHelper {
     public Cursor getSetupnames() {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.rawQuery(
-                "SELECT l.sublocation_name,v.company_name,o.description,r.route_name,lo.location_name,sl.sublocation_name as dest_subloc FROM setup_data s left join sublocations l on s.sublocation_id=l.id left join vendor_masters v on s.vendor_id=v.id left join ore_masters o on s.description_id=o.id left join route_masters r on s.route_id=r.id left join sublocations sl on s.dest_subloc_id=sl.id  left join locations lo on s.destination_id=lo.id ORDER BY s.id DESC LIMIT 1",
+                "SELECT l.sublocation_name,v.company_name,o.description,r.route_name,lo.location_name,sl.sublocation_name as dest_subloc,m.registration_no, m.date_time as machinery_st_tm,mw.registration_no as screeningplant,om.description as inputore,sr1.sublocation_name as old_route,r2.route_name as new_route1,r3.route_name as new_route2,r4.route_name as new_route3,r5.route_name as new_route4 FROM setup_data s left join sublocations l on s.sublocation_id=l.id left join vendor_masters v on s.vendor_id=v.id left join ore_masters o on s.description_id=o.id left join route_masters r on s.route_id=r.id left join sublocations sl on s.dest_subloc_id=sl.id  left join locations lo on s.destination_id=lo.id LEFT JOIN machinery m ON m.id = (SELECT MAX(id) FROM machinery) LEFT JOIN screening_plant sp ON sp.id = (SELECT MAX(id) FROM screening_plant) LEFT JOIN machineWorkingdetails mw on sp.machine_working_id=mw.id LEFT JOIN ore_masters om on sp.ore_id=om.id left join route_masters r1 on s.old_route_id=r1.id left join sublocations sr1 on r1.destination_sublocation=sr1.id left join route_masters r2 on s.new_route1_id=r2.id  left join route_masters r3 on s.new_route2_id=r3.id left join route_masters r4 on s.new_route3_id=r4.id left join route_masters r5 on s.new_route4_id=r5.id ORDER BY s.id DESC LIMIT 1",
                 null
         );
     }
@@ -317,7 +501,7 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor cursor = db.rawQuery(
-                "SELECT id,u_id, location_id FROM mobile_logins WHERE status=1 AND u_id IS NOT NULL",
+                "SELECT ml.id,ml.u_id, ml.location_id,ml.int_tare_validity_days,ml.ext_tare_validity_days,m.machine_id,m.date_time,sp.machine_working_id,ore_id FROM mobile_logins ml LEFT JOIN machinery m ON m.id = (SELECT MAX(id) FROM machinery)  LEFT JOIN screening_plant sp ON sp.id = (SELECT MAX(id) FROM screening_plant) WHERE ml.status=1 AND ml.u_id IS NOT NULL",
                 null
         );
 
@@ -325,7 +509,13 @@ public class dbclass extends SQLiteOpenHelper {
 
             String tid = cursor.getString(cursor.getColumnIndexOrThrow("id"));
             String uid = cursor.getString(cursor.getColumnIndexOrThrow("u_id"));
-            String locationId = cursor.getString(cursor.getColumnIndexOrThrow("location_id"));
+            Long locationId = cursor.getLong(cursor.getColumnIndexOrThrow("location_id"));
+            String machine_id = cursor.getString(cursor.getColumnIndexOrThrow("machine_id"));
+            String date_time = cursor.getString(cursor.getColumnIndexOrThrow("date_time"));
+            int int_tare_validity_days = cursor.getInt(cursor.getColumnIndexOrThrow("int_tare_validity_days"));
+            int ext_tare_validity_days = cursor.getInt(cursor.getColumnIndexOrThrow("ext_tare_validity_days"));
+            int machine_working_id = cursor.getInt(cursor.getColumnIndexOrThrow("machine_working_id"));
+            int ore_id = cursor.getInt(cursor.getColumnIndexOrThrow("ore_id"));
 
             // Save to SharedPreferences
             SharedPreferences prefs = context.getSharedPreferences(
@@ -336,8 +526,14 @@ public class dbclass extends SQLiteOpenHelper {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("TID", tid);
             editor.putString("UID", uid);
-            editor.putString("LOCATION_ID", locationId);
-            editor.apply(); // async & recommended
+            editor.putLong("LOCATION_ID", locationId);
+            editor.putString("machine_id", machine_id);
+            editor.putString("date_time", date_time);
+            editor.putInt("int_tare_validity_days", int_tare_validity_days);
+            editor.putInt("ext_tare_validity_days", ext_tare_validity_days);
+            editor.putInt("screening_plant_id", machine_working_id);
+            editor.putInt("plant_input_product_id", ore_id);
+            editor.apply();
         }
 
         if (cursor != null) cursor.close();
@@ -360,6 +556,24 @@ public class dbclass extends SQLiteOpenHelper {
 
         cursor.close();
         return assetId;
+    }
+
+    public String get_asset_number(String id) {
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        String assetnum = "";
+
+        Cursor cursor = db.rawQuery(
+                "SELECT registration_no FROM asset_masters WHERE id = ?",
+                new String[]{id}
+        );
+
+        if (cursor.moveToFirst()) {
+            assetnum = cursor.getString(0);
+        }
+
+        cursor.close();
+        return assetnum;
     }
 
     public String get_subloc_from_routeid(int id,String locname) {
@@ -489,12 +703,12 @@ public class dbclass extends SQLiteOpenHelper {
         }
     }
 
-    public boolean uploadTripsheets(JSONArray tripsheetsJson) {
+    public boolean uploadTripsheets(JSONArray tripsheetsJson,String urlstr,String type) {
         trustEveryone();
         HttpURLConnection conn = null;
         Log.e("uploadTripsheets","uploadTripsheets");
         try {
-            URL url = new URL(ApiConfig.TRIPSHEET_SAVE);
+            URL url = new URL(urlstr);
             conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("POST");
@@ -508,7 +722,7 @@ public class dbclass extends SQLiteOpenHelper {
             conn.setRequestProperty("Content-Type", "application/json");
 
             JSONObject payload = new JSONObject();
-            payload.put("tripsheets", tripsheetsJson);
+            payload.put(type, tripsheetsJson);
 
             Log.e("uploadTripsheets","uploadTripsheets"+ tripsheetsJson);
 
@@ -645,6 +859,52 @@ public class dbclass extends SQLiteOpenHelper {
 
                     obj.put("created_at", cursor.getString(cursor.getColumnIndexOrThrow("created_at")));
 
+                    obj.put("screening_plant_id",
+                            base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("screening_plant_id"))));
+
+                    obj.put("plant_input_product_id",
+                            base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("plant_input_product_id"))));
+
+                    obj.put("machine_id",
+                            base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("machine_id"))));
+
+                    jsonArray.put(obj);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        return jsonArray;
+    }
+
+    public JSONArray getHsdTransactions(Context context) {
+
+        JSONArray jsonArray = new JSONArray();
+        dbclass dbs = new dbclass(context);
+        SQLiteDatabase db = dbs.getWritableDatabase();
+
+        Cursor cursor = db.rawQuery(
+                "SELECT h.id,h.asset_id,b.sublocation_id,b.bowser_id,h.qty,h.datetime FROM hsd_transactions h left join bowser_stock b on h.bowser_stock_id=b.id WHERE h.POS_UP_BIT = 1",
+                null
+        );
+
+        if (cursor.moveToFirst()) {
+            do {
+                JSONObject obj = new JSONObject();
+
+                try {
+                    obj.put("id", base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("id"))));
+                    obj.put("asset_id", base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("asset_id"))));
+                    obj.put("item_id", base64Encode("1"));
+                    obj.put("sublocation_id", base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("sublocation_id"))));
+                    obj.put("bowser_id", base64Encode(cursor.getString(cursor.getColumnIndexOrThrow("bowser_id"))));
+                    obj.put("qty", cursor.getString(cursor.getColumnIndexOrThrow("qty")));
+                    obj.put("issue_date", cursor.getString(cursor.getColumnIndexOrThrow("datetime")));
+                    obj.put("remark","");
 
                     jsonArray.put(obj);
 
@@ -865,20 +1125,42 @@ public class dbclass extends SQLiteOpenHelper {
     }
 
 
-    public void addRow(Context context,LinearLayout parent, String label, String value) {
+    public void addRow(Context context, LinearLayout parent, String label, String value) {
+
         LayoutInflater inflater = LayoutInflater.from(context);
         View row = inflater.inflate(R.layout.row_setup_detail, parent, false);
 
         TextView tvLabel = row.findViewById(R.id.tvLabel);
+        TextView tvValue = row.findViewById(R.id.tvValue);
+
+        // Default styling
         tvLabel.setTypeface(null, Typeface.BOLD);
         tvLabel.setTextColor(Color.BLACK);
         tvLabel.setTextSize(16);
-        TextView tvValue = row.findViewById(R.id.tvValue);
+
         tvValue.setTextColor(Color.BLACK);
         tvValue.setTextSize(16);
 
         tvLabel.setText(label);
         tvValue.setText(value == null ? "--" : value);
+
+        // ✅ Special Highlight for Sublocation
+        if (label != null && label.equalsIgnoreCase("sublocation")) {
+
+            tvLabel.setTextSize(20);
+            tvValue.setTextSize(20);
+
+            tvLabel.setTextColor(Color.parseColor("#1565C0")); // blue
+            tvValue.setTextColor(Color.parseColor("#1565C0"));
+
+            tvLabel.setTypeface(null, Typeface.BOLD_ITALIC);
+            tvValue.setTypeface(null, Typeface.BOLD);
+
+            // optional background highlight
+            row.setBackgroundColor(Color.parseColor("#E3F2FD")); // light blue bg
+
+            row.setPadding(12, 12, 12, 12);
+        }
 
         parent.addView(row);
     }
@@ -1177,5 +1459,123 @@ public class dbclass extends SQLiteOpenHelper {
             return "";
         }
 
+    }
+    public String display_format_date_time(String dbDate) {
+        if (dbDate != null && !dbDate.isEmpty()) {
+            try {
+                SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                Date date = dbFormat.parse(dbDate);
+
+                SimpleDateFormat displayFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault());
+                return displayFormat.format(date);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return dbDate; // fallback: return original if error
+            }
+        } else {
+            return "";
+        }
+    }
+
+    public String getBowserStock(long bowserId) {
+        String qty = "0.00";
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT qty FROM bowser_stock WHERE id='"+bowserId+"'",null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            double value = cursor.getDouble(0); // qty column
+            qty = String.format("%.2f", value);
+            cursor.close();
+        }
+
+        return qty;
+    }
+
+    public List<SpinnerItem> get_bowser_stock() {
+        List<SpinnerItem> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor c = db.rawQuery(
+                "select b.id,s.sublocation_name,b.qty from bowser_stock b left join sublocations s on b.sublocation_id=s.id order by b.date_time desc",null
+        );
+
+        while (c.moveToNext()) {
+            list.add(new SpinnerItem(
+                    c.getInt(0),        // id
+                    c.getString(1)+" ("+ c.getString(2)+")"     // route name
+            ));
+        }
+        c.close();
+        return list;
+    }
+
+    void onRfidTapped(CardView cardDetails, ContentValues values, String error, Handler handler, Runnable hideRunnable, LinearLayout detailsContainer, Context context) {
+
+        handler.removeCallbacks(hideRunnable);
+
+        detailsContainer.removeAllViews();
+
+        for (Map.Entry<String, Object> entry : values.valueSet())
+        {
+
+            String key = entry.getKey();
+            Object valObj = entry.getValue();
+            String value = valObj == null ? "--" : String.valueOf(valObj);
+
+            View row = createRow(context,key, value,error);
+            detailsContainer.addView(row);
+        }
+
+        /*if (!error.trim().isEmpty())
+        {
+
+            TextView errorView = new TextView(this);
+            errorView.setText(error);
+            errorView.setTextColor(Color.WHITE);
+            errorView.setTextSize(18);
+            errorView.setPadding(16, 16, 16, 16);
+
+            detailsContainer.addView(errorView);
+
+            cardDetails.setCardBackgroundColor(Color.parseColor("#D32F2F")); // red
+        }else {
+            cardDetails.setCardBackgroundColor(Color.WHITE); // or your normal color
+        }*/
+        cardDetails.startAnimation(
+                AnimationUtils.loadAnimation(context, android.R.anim.slide_in_left)
+        );
+        cardDetails.setVisibility(View.VISIBLE);
+        handler.postDelayed(hideRunnable, 5 * 60 * 1000);
+    }
+
+    double route_consumption(int route_id_card)
+    {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        double fuel_cons = 0.0;
+        Cursor c = db.rawQuery(
+                "select fuel_consumption from route_masters where id=?",new String[]{String.valueOf(route_id_card)}
+        );
+
+        if (c.moveToFirst()) {
+            fuel_cons = c.getDouble(0);
+        }
+        c.close();
+        return fuel_cons;
+    }
+
+    public String getTripStatusText(int trip_status_read) {
+
+        switch (trip_status_read) {
+            case 1:
+                return "Open";
+            case 2:
+                return "Closed";
+            default:
+                return "Unknown (" + trip_status_read + ")";
+        }
     }
 }

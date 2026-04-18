@@ -21,7 +21,7 @@
                 android:layout_width="76dp"
                 android:layout_height="wrap_content"
                 android:text="OPS"
-                android:visibility="gone" />
+                android:visibility="visible" />
 
             <Button
                 android:id="@+id/btnSync"
@@ -42,14 +42,25 @@
                 android:layout_height="wrap_content"/>
 
         </LinearLayout>
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Truck"
+            android:textStyle="bold"
+            android:layout_below="@id/topBar"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="8dp"/>
 
         <LinearLayout
             android:id="@+id/background_main"
-            android:layout_width="match_parent"
+            android:layout_width="280dp"
             android:layout_height="wrap_content"
-            android:layout_below="@id/topBar"
-            android:background="@drawable/_360454"
-            android:gravity="center"
+            android:layout_below="@id/switchMode"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="1dp"
+            android:layout_marginEnd="21dp"
+            android:background="@drawable/truck_ops"
             android:orientation="vertical">
 
             <TextView
@@ -83,6 +94,7 @@
 
 
         </LinearLayout>
+
         <LinearLayout
             android:id="@+id/background_main2"
             android:layout_width="match_parent"

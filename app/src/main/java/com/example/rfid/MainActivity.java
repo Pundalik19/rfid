@@ -55,10 +55,12 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -119,46 +121,35 @@ public class MainActivity extends AppCompatActivity {
     long destinationId;
     long routeId;
 
+    long old_route_id = -1;
+    long new_route1_id = -1;
+    long new_route2_id = -1;
+    long new_route3_id = -1;
+    long new_route4_id = -1;
+
     String mobileuid ="";
     String TID ="";
-
+    long LOCATION_ID_MOBILE =0;
     LinearLayout background_main;
-
     TextView tvRfid,tvTruckNo,tvVendor;
     Handler handler;
     Runnable hideRunnable;
     CardView cardDetails;
     LinearLayout detailsContainer;
-
+    String machine_id;
+    String machine_start_date_time;
+    int int_tare_validity_days;
+    int ext_tare_validity_days;
+    int screening_plant_id;
+    int plant_input_product_id;
     private static AlertDialog currentDialog;
+    SwitchMaterial switchMode;
+    int operation_type = 0;//0-truck,1-barge
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        dbcl = new dbclass(MainActivity.this);
-
-        if (dbcl.isMobileLoginEmpty(MainActivity.this)) {
-            Intent intent = new Intent(this, activity_login.class);
-            startActivity(intent);
-            finish();
-            return;
-        }
-
-
-
-        dbcl.saveUidAndLocationToPrefs(MainActivity.this);
-
-        SharedPreferences prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
-
-        mobileuid = prefs.getString("UID", "");
-        TID = prefs.getString("TID", "");
-        String locationIdsp = prefs.getString("LOCATION_ID", "");
-
         setContentView(R.layout.activity_main);
-
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-
         Button btnSetup = findViewById(R.id.btnSetup);
         Button btnIssuerfid = findViewById(R.id.btnIssuerfid);
         Button btnExit = findViewById(R.id.btnExit);
@@ -171,6 +162,38 @@ public class MainActivity extends AppCompatActivity {
         hideRunnable = () -> cardDetails.setVisibility(View.GONE);
         detailsContainer = findViewById(R.id.detailsContainer);
 
+        dbcl = new dbclass(MainActivity.this);
+
+        if (dbcl.isMobileLoginEmpty(MainActivity.this)) {
+            Intent intent = new Intent(this, activity_login.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        dbcl.saveUidAndLocationToPrefs(MainActivity.this);
+
+        SharedPreferences prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
+
+        mobileuid = prefs.getString("UID", "");
+        TID = prefs.getString("TID", "");
+        LOCATION_ID_MOBILE = prefs.getLong("LOCATION_ID", 0);
+
+        Long locationIdsp = prefs.getLong("LOCATION_ID", 0);
+        machine_id = prefs.getString("machine_id", "");
+        machine_start_date_time = prefs.getString("date_time", "");
+        int_tare_validity_days = prefs.getInt("int_tare_validity_days",0);
+        ext_tare_validity_days = prefs.getInt("ext_tare_validity_days", 0);
+        screening_plant_id = prefs.getInt("screening_plant_id", 0);
+        plant_input_product_id = prefs.getInt("plant_input_product_id", 0);
+        switchMode = findViewById(R.id.switchMode);
+
+
+
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+
+
+
         btnSetup.setOnClickListener(v ->
                 startActivity(new Intent(this, activity_login.class)));
         syncbutton.setOnClickListener(v ->
@@ -182,6 +205,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (nfcAdapter == null) {
             Log.e("nfcAdapter","NFC NOT Supported on this device!");
+            dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "NFC NOT Supported on this device!");
             //finish();
             return;
         }else
@@ -213,62 +237,44 @@ public class MainActivity extends AppCompatActivity {
         Cursor cursor = dbcl.getSetupnames();  // your existing query
         showSetupDetails(cursor,this);
 
+        switchMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                operation_type = 1;
+                switchMode.setText("Barge");
+                background_main.setBackgroundResource(R.drawable.barge_ops);
+            } else {
+                operation_type = 0;
+                switchMode.setText("Truck");
+                background_main.setBackgroundResource(R.drawable.truck_ops);
+            }
+        });
     }
 
-    private void onRfidTapped(ContentValues values,String error) {
-
-        handler.removeCallbacks(hideRunnable);
-
-        detailsContainer.removeAllViews();
-
-        for (Map.Entry<String, Object> entry : values.valueSet())
-        {
-
-            String key = entry.getKey();
-            Object valObj = entry.getValue();
-            String value = valObj == null ? "--" : String.valueOf(valObj);
-
-            View row = dbcl.createRow(MainActivity.this,key, value,error);
-            detailsContainer.addView(row);
-        }
-
-        /*if (!error.trim().isEmpty())
-        {
-
-            TextView errorView = new TextView(this);
-            errorView.setText(error);
-            errorView.setTextColor(Color.WHITE);
-            errorView.setTextSize(18);
-            errorView.setPadding(16, 16, 16, 16);
-
-            detailsContainer.addView(errorView);
-
-            cardDetails.setCardBackgroundColor(Color.parseColor("#D32F2F")); // red
-        }else {
-            cardDetails.setCardBackgroundColor(Color.WHITE); // or your normal color
-        }*/
-        cardDetails.startAnimation(
-                AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left)
-        );
-        cardDetails.setVisibility(View.VISIBLE);
-        handler.postDelayed(hideRunnable, 5 * 60 * 1000);
-    }
     @Override
     protected void onResume() {
         super.onResume();
-        nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
+        if (nfcAdapter != null)
+        {
+            nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
+        }
 
         dbclass db = new dbclass(this);
         Cursor cursor = db.getSetupData();
 
-        if (cursor != null && cursor.moveToFirst()) {
-
+        if (cursor != null && cursor.moveToFirst())
+        {
             locationId = cursor.getLong(cursor.getColumnIndexOrThrow("location_id"));
             sublocationId = cursor.getLong(cursor.getColumnIndexOrThrow("sublocation_id"));
             vendorId = cursor.getLong(cursor.getColumnIndexOrThrow("vendor_id"));
             descriptionId = cursor.getLong(cursor.getColumnIndexOrThrow("description_id"));
             destinationId = cursor.getLong(cursor.getColumnIndexOrThrow("destination_id"));
+            old_route_id = cursor.getLong(cursor.getColumnIndexOrThrow("old_route_id"));
+            new_route1_id = cursor.getLong(cursor.getColumnIndexOrThrow("new_route1_id"));
+            new_route2_id = cursor.getLong(cursor.getColumnIndexOrThrow("new_route2_id"));
+            new_route3_id = cursor.getLong(cursor.getColumnIndexOrThrow("new_route3_id"));
+            new_route4_id = cursor.getLong(cursor.getColumnIndexOrThrow("new_route4_id"));
             routeId = cursor.getLong(cursor.getColumnIndexOrThrow("route_id"));
+
             Log.e("setup"," locationId "+locationId+" sublocationId "+sublocationId+" vendorId "+vendorId+" descriptionId "+descriptionId+" destinationId "+destinationId+" routeId "+routeId);
             cursor.close();
         }
@@ -282,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            boolean successup = dbcl.uploadTripsheets(tripsheets);
+            boolean successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
 
             if (successup) {
                 List<Long> uploadedIds = new ArrayList<>();
@@ -307,13 +313,18 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }).start();
-
+        Cursor cursor1 = dbcl.getSetupnames();  // your existing query
+        showSetupDetails(cursor1,this);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        nfcAdapter.disableForegroundDispatch(this);
+        if(nfcAdapter!=null)
+        {
+            nfcAdapter.disableForegroundDispatch(this);
+        }
+
     }
 
 
@@ -362,21 +373,19 @@ public class MainActivity extends AppCompatActivity {
             try {
 
                 nfca.connect();
-                //long seconds = bytesToSeconds(pageData);
 
-                /***************READ CARD START ******************/
-                String currentDateMONTH="";
-                String monthyear="";
-                String monthyearfull="";
+                String currentDateMONTH = "";
+                String monthyear = "";
+                String monthyearfull = "";
 
                 currentDateMONTH = new SimpleDateFormat("yyMM", Locale.getDefault()).format(new Date());
                 monthyear = new SimpleDateFormat("dd", Locale.getDefault())
                         .format(new Date());
                 monthyearfull = new SimpleDateFormat("yyyy", Locale.getDefault())
                         .format(new Date());
-                Log.e("currentDateMONTH",currentDateMONTH+" ");
+                Log.e("currentDateMONTH", currentDateMONTH + " ");
 
-                String mob_id=mobileuid;
+                String mob_id = mobileuid;
                 String trip_status;
                 String trip_status_save;
                 String tripsrno_org = getNextTripSheetNo();
@@ -384,11 +393,11 @@ public class MainActivity extends AppCompatActivity {
                 String part1 = tripsrno_org.substring(0, 2);
                 String part2 = tripsrno_org.substring(2, 4);
 
-                String tripstarttime =  dbcl.db_format_date_time(new Date());
-                String srctime =  dbcl.db_format_date_time(new Date());
-                long seconds =  dbcl.secondsFromBaseDate();
-                String tripsheetno = mob_id+currentDateMONTH+monthyear+tripsrno_org;
-                String src_mob=TID;
+                String tripstarttime = dbcl.db_format_date_time(new Date());
+                String srctime = dbcl.db_format_date_time(new Date());
+                long seconds = dbcl.secondsFromBaseDate();
+                String tripsheetno = mob_id + currentDateMONTH + monthyear + tripsrno_org;
+                String src_mob = TID;
 
                 byte[] pageData = dbcl.readPage(nfca, 04);
                 String asset_num_04 = new String(pageData, StandardCharsets.UTF_8).trim();
@@ -397,45 +406,64 @@ public class MainActivity extends AppCompatActivity {
                 pageData = dbcl.readPage(nfca, 06);
                 String asset_num_06 = new String(pageData, StandardCharsets.UTF_8).trim();
 
-                asset_number = asset_num_04+asset_num_05+asset_num_06;
-                Log.d("NFC_READ", "040506 : asset number "+asset_num_04+" "+asset_num_05+" "+asset_num_06);
+                asset_number = asset_num_04 + asset_num_05 + asset_num_06;
+                Log.d("NFC_READ", "040506 : asset number " + asset_num_04 + " " + asset_num_05 + " " + asset_num_06);
+
+                if (asset_number.trim().isEmpty()) {
+                    error += "Vehicle number not found.Please get the card checked\n";
+                    dbcl.showScrollableErrorDialog(MainActivity.this, "Error", error);
+                    return;
+                }
 
                 String truckid = dbcl.getAssetId_fromdb(asset_number);
 
                 pageData = dbcl.readPage(nfca, 25);
-                String tripsheet_no_last2  = new String(pageData, 0, 2);//bytesToString(pageData, 0, 2);
-                trip_status_read  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                String tripsheet_no_last2 = new String(pageData, 0, 2);//bytesToString(pageData, 0, 2);
+                trip_status_read = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                Log.d("NFC_READ", "trip_status_read pageData"+trip_status_read+ " "+Arrays.toString(pageData)+" tripsheet_no_last2 "+tripsheet_no_last2);
+                Log.d("NFC_READ", "trip_status_read pageData" + trip_status_read + " " + Arrays.toString(pageData) + " tripsheet_no_last2 " + tripsheet_no_last2);
 
 
                 pageData = dbcl.readPage(nfca, 34);
-                int src_mob_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                int src_mob_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
 
                 ContentValues trip_close = new ContentValues();
                 String now = null;
 
-                now =  dbcl.db_format_date_time(new Date());
+                pageData = dbcl.readPage(nfca, 13);
+                int asset_type = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                int gross_wt_capacity = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                pageData = dbcl.readPage(nfca, 14);
-                long tare_wt_sec_card  = Long.parseLong(dbcl.bytesToString(pageData, 0, 4));
-                String tare_wt_time_card;
-                Log.e("tare_wt_sec_card"," "+tare_wt_sec_card);
-                if(tare_wt_sec_card > 0)
+                String asset_type_display="";
+                if(asset_type==1)
                 {
-                    tare_wt_time_card =  dbcl.db_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card));
-
-                    Date todaysdatetm = new Date();
-
-                    long diffMillis = todaysdatetm.getTime() - dbcl.date_time_FromSeconds(tare_wt_sec_card).getTime();
-                    long diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis);
-                    if (diffDays > 30) {
-                        error += "TARE WEIGHT WAS TAKEN "+diffDays+" DAYS BEFORE(VALID FOR 30 DAYS). KINDLY GET THE TARE WEIGHT DONE.\n";
-                    }
+                    asset_type_display="Truck";
+                }else if(asset_type==2)
+                {
+                    asset_type_display="Machine";
+                }else if(asset_type==3)
+                {
+                    asset_type_display="Barge";
+                }else if(asset_type==4)
+                {
+                    asset_type_display="Bowser";
                 }else
                 {
-                    tare_wt_time_card = null;
-                    error += "TARE WEIGHT TIME NOT FOUND\n";
+                    asset_type_display="Na";
+                }
+
+                now = dbcl.db_format_date_time(new Date());
+
+                pageData = dbcl.readPage(nfca, 14);
+                long tare_wt_sec_card = Long.parseLong(dbcl.bytesToString(pageData, 0, 4));
+                String tare_wt_time_card;
+                Log.e("tare_wt_sec_card", " " + tare_wt_sec_card);
+                if (tare_wt_sec_card > 0) {
+                    tare_wt_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card));
+
+                } else
+                {
+                    tare_wt_time_card = "";
                 }
 
                 pageData = dbcl.readPage(nfca, 15);
@@ -443,427 +471,549 @@ public class MainActivity extends AppCompatActivity {
                 int tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
 
-
-
                 pageData = dbcl.readPage(nfca, 35);
-                int dest_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                int dest_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
                 String dest_time_card = null;
-                Log.e("dest_sec_card"," "+dest_sec_card);
-                card_details.put("Card No",rfid_card);
-                card_details.put("Vehicle No",asset_number);
-                card_details.put("Src Tare Weight",tare_wt_card);
+                Log.e("dest_sec_card", " " + dest_sec_card);
+                card_details.put("Card No", rfid_card);
+                card_details.put("Vehicle No", asset_number);
+                card_details.put("Asset Type", asset_type_display);
+                card_details.put("Src Tare Weight", tare_wt_card);
                 card_details.put("Src Tare Weight Time", dbcl.db_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card)));
 
-                if(trip_status_read == 1) //trip open
+                if (asset_type == 1)
                 {
 
-                    pageData = dbcl.readPage(nfca, 18);
-                    int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
-
-                    String HSD_BAL = String.valueOf(HSD/100);
-
-                    Log.e("HSD_BAL"," "+HSD_BAL);
-
-                    String closing_trip_num_card ="";
-                    pageData = dbcl.readPage(nfca, 22);
-                    Log.d("NFC_READ", "22  "+Arrays.toString(pageData));
-                    String closing_trip_num_01 = new String(pageData, StandardCharsets.UTF_8).trim();
-                    pageData = dbcl.readPage(nfca, 23);
-                    Log.d("NFC_READ", "23  "+Arrays.toString(pageData));
-                    String closing_trip_num_02 = new String(pageData, StandardCharsets.UTF_8).trim();
-                    pageData = dbcl.readPage(nfca, 24);
-                    Log.d("NFC_READ", "24  "+Arrays.toString(pageData));
-                    String closing_trip_num_03 = new String(pageData, StandardCharsets.UTF_8).trim();
-
-
-                    closing_trip_num_card = closing_trip_num_01+closing_trip_num_02+closing_trip_num_03+tripsheet_no_last2;
-                    Log.d("NFC_READ", "closing_trip_num_card "+closing_trip_num_card+" ");
-
-                    card_details.put("Trip No",closing_trip_num_card);
-
-
-                    pageData = dbcl.readPage(nfca, 27);
-                    int desc_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int route_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-                    int src_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card,"source_sublocation"));//fetching src sublocation
-                    int dest_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card,"destination_sublocation"));//fetching desr sublocation
-                    Log.d("NFC_READ", "dest_subloc_id_trip "+dest_subloc_id_trip+" "+sublocationId);
-
-                    card_details.put("Source Location",dbcl.get_subloc_name(src_subloc_id_trip));
-                    card_details.put("Destination Location",dbcl.get_subloc_name(dest_subloc_id_trip));
-                    card_details.put("Route",dbcl.get_route_name(route_id_card));
-
-                    pageData = dbcl.readPage(nfca, 28);
-                    int wb_src_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
-                    String wb_src_time_card;
-                    if(wb_src_sec_card > 0)
+                    if (trip_status_read == 1) //trip open
                     {
-                        wb_src_time_card =  dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_src_sec_card));
-                    } else {
-                        wb_src_time_card = null;
-                    }
-
-                    pageData = dbcl.readPage(nfca, 29);
-                    int src_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int wb_src_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
-                    pageData = dbcl.readPage(nfca, 30);
-                    int wb_dest_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
-                    String wb_dest_time_card;
-                    if(wb_dest_sec_card > 0)
-                    {
-                        wb_dest_time_card =  dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_dest_sec_card));
-                    } else {
-                        wb_dest_time_card = null;
-                    }
-
-                    pageData = dbcl.readPage(nfca, 31);
-                    int dest_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int wb_dest_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
-                    pageData = dbcl.readPage(nfca, 32);
-                    int dest_tare_wt_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
-                    String dest_tare_wt_time_card;
-                    if(dest_tare_wt_sec_card > 0)
-                    {
-                        dest_tare_wt_time_card =  dbcl.db_format_date_time(dbcl.date_time_FromSeconds(dest_tare_wt_sec_card));
-                    } else {
-                        dest_tare_wt_time_card = null;
-                    }
-
-                    pageData = dbcl.readPage(nfca, 33);
-                    int dest_tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int wb_dest_tare_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
-                    pageData = dbcl.readPage(nfca, 36);
-                    int src_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
-                    String src_time_card;
-                    if(src_sec_card > 0)
-                    {
-                        src_time_card =  dbcl.db_format_date_time(dbcl.date_time_FromSeconds(src_sec_card));
-
-                    } else {
-                        src_time_card = null;
-                    }
-
-                    pageData = dbcl.readPage(nfca, 37);
-                    int vendor_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    //dest_subloc_id_trip= (int) sublocationId;
-                    if(dest_subloc_id_trip==sublocationId && "".equals(error))
-                    {
-
-                        nfca.close();
-                        trip_status= "02";
-                        trip_status_save="CLOSED";
-
-                        Log.e("stringTo2Bytes",Arrays.toString(dbcl.stringTo2Bytes(trip_status)));
-
-                        ProgressDialog dialog = new ProgressDialog(this);
-                        dialog.setMessage("Writing card...");
-                        dialog.setCancelable(false);
-                        dialog.show();
-
-                        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                        String closing_trip_num_card = "";
+                        pageData = dbcl.readPage(nfca, 22);
+                        Log.d("NFC_READ", "22  " + Arrays.toString(pageData));
+                        String closing_trip_num_01 = new String(pageData, StandardCharsets.UTF_8).trim();
+                        pageData = dbcl.readPage(nfca, 23);
+                        Log.d("NFC_READ", "23  " + Arrays.toString(pageData));
+                        String closing_trip_num_02 = new String(pageData, StandardCharsets.UTF_8).trim();
+                        pageData = dbcl.readPage(nfca, 24);
+                        Log.d("NFC_READ", "24  " + Arrays.toString(pageData));
+                        String closing_trip_num_03 = new String(pageData, StandardCharsets.UTF_8).trim();
 
 
-                        String finalClosing_trip_num_card = closing_trip_num_card;
-                        String finalAsset_number = asset_number;
-                        String finalNow = now;
-                        new Thread(() -> {
+                        closing_trip_num_card = closing_trip_num_01 + closing_trip_num_02 + closing_trip_num_03 + tripsheet_no_last2;
+                        Log.d("NFC_READ", "closing_trip_num_card " + closing_trip_num_card + " ");
 
-                            boolean success =
-                                    dbcl.writeOrFail(this,tag,25, dbcl.combineByteArrays("70".getBytes(StandardCharsets.UTF_8),dbcl.stringTo2Bytes(trip_status))) &&
-                                            dbcl.writeOrFail(this,tag, 34,dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(src_mob_id_card)), dbcl.stringTo2Bytes(TID))) &&
-                                            dbcl.writeOrFail(this,tag, 35,dbcl.stringTo4Bytes(String.valueOf(seconds)));
-                            runOnUiThread(() -> {
-                                dialog.dismiss();
+                        card_details.put("Trip No", closing_trip_num_card);
 
-                                if (success) {
-                                    vibrator.vibrate(100);
-                                    Toast.makeText(this, "Card written successfully ✅", Toast.LENGTH_SHORT).show();
 
-                                    trip_close.put("tripsheet_no", finalClosing_trip_num_card);
-                                    trip_close.put("trip_type", "RFID");
-                                    trip_close.put("initial_route_id", String.valueOf(route_id_card));
-                                    trip_close.put("final_route_id", String.valueOf(route_id_card));
-                                    trip_close.put("rfid_id", rfid_card);
-                                    trip_close.put("truck_id", truckid);
-                                    trip_close.put("truck_no", finalAsset_number);
-                                    trip_close.put("vendor_id", String.valueOf(vendor_id_card));
-                                    trip_close.put("ore_id", String.valueOf(desc_id_card));
-                                    trip_close.put("status", trip_status_save);
-                                    trip_close.put("src_time", src_time_card);
-                                    trip_close.put("src_mobile", String.valueOf(src_mob_id_card));
-                                    trip_close.put("dest_time", srctime);
-                                    trip_close.put("dest_mobile", src_mob);
-                                    trip_close.put("created_at", finalNow);
-                                    trip_close.put("wb_src_time", wb_src_time_card);
-                                    trip_close.put("wb_src_gross_login", wb_src_gr_login_card);
-                                    trip_close.put("src_tare_wt_time", tare_wt_time_card);
-                                    trip_close.put("wb_src_tare_login", tare_wt_wb_log_card);
-                                    trip_close.put("wb_dest_time", wb_dest_time_card);
-                                    trip_close.put("wb_dest_gross_login", wb_dest_gr_login_card);
-                                    trip_close.put("dest_tare_wt_time", dest_tare_wt_time_card);
-                                    trip_close.put("wb_dest_tare_login", wb_dest_tare_login_card);
-                                    trip_close.put("src_gross_wt", src_gr_wt_card);
-                                    trip_close.put("src_tare_wt", tare_wt_card);
-                                    trip_close.put("dest_gross_wt", dest_gr_wt_card);
-                                    trip_close.put("dest_tare_wt", dest_tare_wt_card);
-                                    trip_close.put("hsd_bal", HSD_BAL);
+                        pageData = dbcl.readPage(nfca, 27);
+                        int desc_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int route_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int src_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card, "source_sublocation"));//fetching src sublocation
+                        int dest_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card, "destination_sublocation"));//fetching desr sublocation
+                        Log.d("NFC_READ", "dest_subloc_id_trip " + dest_subloc_id_trip + " " + sublocationId);
 
-                                    if (saveTripsheet(finalClosing_trip_num_card,trip_close))
-                                    {
-                                        Toast.makeText(this, "Tripsheet closed successfully", Toast.LENGTH_SHORT).show();
-                                        showScrollableErrorDialog(MainActivity.this,"Success", "Tripsheet closed successfully");
-                                        /*background_main.setBackgroundColor(Color.GREEN);
+                        pageData = dbcl.readPage(nfca, 18);
+                        int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
 
-                                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                            background_main.setBackground(originalBg);
-                                        }, 5000);*/
-                                        trip_status_read = 2;
-                                    } else
-                                    {
-                                        Toast.makeText(this, "Failed to close tripsheet", Toast.LENGTH_SHORT).show();
-                                        //background_main.setBackgroundColor(Color.RED);
-                                        showScrollableErrorDialog(MainActivity.this,"Error", "Failed to close tripsheet");
-                                        /*new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                            background_main.setBackground(originalBg);
-                                        }, 5000);*/
-                                    }
-                                }
+                        Double hsd_card = HSD / 100.0;
 
-                            });
+                        hsd_card = hsd_card + dbcl.route_consumption(route_id_card);
 
-                        }).start();
+                        String HSD_BAL = String.valueOf(hsd_card);
 
-                    }else
-                    {
-                        trip_status_save = "OPEN";
+                        long scaledValue = Math.round(hsd_card * 100);
+                        String hsd_card_str = String.valueOf(scaledValue);
 
-                        error += "WRONG DESTINATION\nPROCEED TO :- \n\n"+dbcl.get_subloc_name(dest_subloc_id_trip);
+                        Log.e("HSD_BAL", " " + HSD_BAL+" "+hsd_card_str);
 
-                        //background_main.setBackgroundColor(Color.RED);
-                        showScrollableErrorDialog(MainActivity.this,"Error",error);
-                        /*new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            background_main.setBackground(originalBg);
-                        }, 5000);*/
-                    }
-                    nfca.close();
+                        card_details.put("Source Location", dbcl.get_subloc_name(src_subloc_id_trip));
+                        card_details.put("Destination Location", dbcl.get_subloc_name(dest_subloc_id_trip));
+                        card_details.put("Route", dbcl.get_route_name(route_id_card));
 
-                }else
-                {
-                    trip_status_save = "OPEN";
-                    trip_status = "01";
-
-                    Log.e("dest_sec_card",dest_sec_card+" ");
-
-                    if(dest_sec_card > 0)
-                    {
-                        Date desttimedate = dbcl.date_time_FromSeconds(dest_sec_card);
-
-                        error += dbcl.checktime(desttimedate);
-
-                    }
-
-                    pageData = dbcl.readPage(nfca, 11);
-                    String Asset_id  = dbcl.bytesToString(pageData, 0, 3);
-                    int asset_status = Integer.parseInt(dbcl.bytesToString(pageData, 3, 1));
-
-                    Log.d("NFC_READ", "11 : asset number "+Asset_id+" "+asset_status);
-
-                    if(asset_status==0)
-                    {
-                        error += "VEHICLE IS INACTIVE\n";
-                    }
-
-                    pageData = dbcl.readPage(nfca, 16);
-                    int ins_val_seconds  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int rdt_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
-                    Date insurance_validity = null;
-                    Date rdtax_validity = null;
-
-                    Calendar todayCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
-                    Date today = todayCal.getTime();
-
-                    if(ins_val_seconds > 0)
-                    {
-                        insurance_validity = dbcl.dateFromDays(ins_val_seconds);
-                        if(insurance_validity.before(today))
-                        {
-                            error += "INSURANCE VALIDITY IS OVER\n";
+                        pageData = dbcl.readPage(nfca, 28);
+                        int wb_src_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        String wb_src_time_card;
+                        if (wb_src_sec_card > 0) {
+                            wb_src_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_src_sec_card));
+                        } else {
+                            wb_src_time_card = null;
                         }
-                    }else
-                    {
-                        error += "INSURANCE VALIDITY DATE NOT FOUND\n";
-                    }
-                    Log.d("NFC_READ", "25 : ins_val_seconds "+ins_val_seconds+" insurance_validity"+insurance_validity);
 
-                    if(rdt_val_seconds > 0)
-                    {
-                        rdtax_validity = dbcl.dateFromDays(rdt_val_seconds);
-                        if(rdtax_validity.before(today))
-                        {
-                            error += "ROAD TAX VALIDITY IS OVER\n";
+                        pageData = dbcl.readPage(nfca, 29);
+                        int src_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int wb_src_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+
+                        pageData = dbcl.readPage(nfca, 30);
+                        int wb_dest_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        String wb_dest_time_card;
+                        if (wb_dest_sec_card > 0) {
+                            wb_dest_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_dest_sec_card));
+                        } else {
+                            wb_dest_time_card = null;
                         }
-                    }else
-                    {
-                        error += "ROAD TAX VALIDITY DATE NOT FOUND\n";
-                    }
 
-                    Log.d("NFC_READ", "25 : rdt_val_seconds "+rdt_val_seconds+" rdtax_validity"+rdtax_validity);
+                        pageData = dbcl.readPage(nfca, 31);
+                        int dest_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int wb_dest_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                    pageData = dbcl.readPage(nfca, 17);
-                    int fit_val_seconds  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                    int puc_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
-                    Date fitness_validity = null;
-                    Date puc_validity = null;
-
-                    if(fit_val_seconds > 0)
-                    {
-                        fitness_validity = dbcl.dateFromDays(fit_val_seconds);
-                        if(fitness_validity.before(today))
-                        {
-                            error += "FITNESS VALIDITY IS OVER\n";
+                        pageData = dbcl.readPage(nfca, 32);
+                        int dest_tare_wt_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        String dest_tare_wt_time_card;
+                        if (dest_tare_wt_sec_card > 0) {
+                            dest_tare_wt_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(dest_tare_wt_sec_card));
+                        } else {
+                            dest_tare_wt_time_card = null;
                         }
-                    }else
-                    {
-                        error += "FITNESS VALIDITY DATE NOT FOUND\n";
-                    }
 
-                    Log.d("NFC_READ", "25 : fit_val_seconds "+fit_val_seconds+" fitness_validity"+fitness_validity);
+                        pageData = dbcl.readPage(nfca, 33);
+                        int dest_tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int wb_dest_tare_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                    if(puc_val_seconds > 0)
-                    {
-                        puc_validity = dbcl.dateFromDays(puc_val_seconds);
-                        if(puc_validity.before(today))
-                        {
-                            error += "PUC VALIDITY IS OVER\n";
+                        pageData = dbcl.readPage(nfca, 36);
+                        int src_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        String src_time_card;
+                        if (src_sec_card > 0) {
+                            src_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(src_sec_card));
+
+                        } else {
+                            src_time_card = null;
                         }
-                    }else
-                    {
-                        error += "PUC VALIDITY DATE NOT FOUND\n";
-                    }
 
-                    Log.d("NFC_READ", "25 : puc_val_seconds "+puc_val_seconds+" puc_validity"+puc_validity);
+                        pageData = dbcl.readPage(nfca, 37);
+                        int vendor_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int machine_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                    nfca.close();
-                    error="";
-                    if(!"".equals(error))
-                    {
-                        //background_main.setBackgroundColor(Color.RED);
-                        showScrollableErrorDialog(MainActivity.this,"Error",error);
-                        /*new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            background_main.setBackground(originalBg);
-                        }, 5000);*/
+                        pageData = dbcl.readPage(nfca, 38);
+                        int screening_plant_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int plant_input_product_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
-                    }else
-                    {
+                        //dest_subloc_id_trip= (int) sublocationId;
+                        if ((dest_subloc_id_trip == sublocationId || route_id_card == old_route_id) && "".equals(error)) {
 
+                            final long final_route_id;
+                            long tempRouteId = route_id_card;
 
-                        /***************READ CARD OVER ******************/
-                        ProgressDialog dialog = new ProgressDialog(this);
-                        dialog.setMessage("Writing card...");
-                        dialog.setCancelable(false);
-                        dialog.show();
+                            long[] routes = {old_route_id};
 
-                        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                        String finalCurrentDateMONTH = currentDateMONTH;
-                        String finalMonthyear = monthyear;
-                        String finalAsset_number1 = asset_number;
-                        String finalNow1 = now;
-                        new Thread(() -> {
-
-                            runOnUiThread(() -> {
-                                dbcl.writeStringToTag(tag, mob_id,22,0);
-                                dbcl.writeStringToTag(tag, finalCurrentDateMONTH,23,0);
-                                dbcl.writeStringToTag(tag, finalMonthyear +part1,24,0);
-                                boolean success =
-                                        dbcl.writeOrFail(this,tag, 25, dbcl.combineByteArrays(part2.getBytes(StandardCharsets.UTF_8), dbcl.stringTo2Bytes(trip_status))) &&
-                                                dbcl.writeOrFail(this,tag, 26, dbcl.stringTo4Bytes(String.valueOf(seconds))) &&
-                                                dbcl.writeOrFail(this,tag, 27, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(descriptionId)), dbcl.stringTo2Bytes(String.valueOf(routeId)))) &&
-
-                                                dbcl.writeOrFail(this,tag, 28, dbcl.stringTo4Bytes("00")) &&
-                                                dbcl.writeOrFail(this,tag, 29, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
-                                                dbcl.writeOrFail(this,tag, 30, dbcl.stringTo4Bytes("00")) &&
-                                                dbcl.writeOrFail(this,tag, 31, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
-                                                dbcl.writeOrFail(this,tag, 32, dbcl.stringTo4Bytes("00")) &&
-                                                dbcl.writeOrFail(this,tag, 33, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
-
-                                                dbcl.writeOrFail(this,tag, 34, dbcl.combineByteArrays(dbcl.stringTo2Bytes(TID), dbcl.stringTo2Bytes("00"))) &&
-                                                dbcl.writeOrFail(this,tag, 35, dbcl.stringTo4Bytes("00")) &&
-                                                dbcl.writeOrFail(this,tag, 36, dbcl.stringTo4Bytes(String.valueOf(seconds))) &&
-                                                dbcl.writeOrFail(this,tag, 37, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(vendorId)), dbcl.stringTo2Bytes("00")));
-
-                                dialog.dismiss();
-
-                                if (success)
+                            for (long r : routes) {
+                                if (route_id_card == r)
                                 {
-                                    vibrator.vibrate(100);
-                                    Toast.makeText(this, "Card written successfully ✅", Toast.LENGTH_SHORT).show();
+                                    tempRouteId = new_route1_id;
+                                    break;
+                                }
+                            }
+                            final_route_id = tempRouteId; // ✅ now final
+                            nfca.close();
+                            trip_status = "02";
+                            trip_status_save = "CLOSED";
 
-                                        trip_close.put("tripsheet_no", tripsheetno);
+                            Log.e("stringTo2Bytes", Arrays.toString(dbcl.stringTo2Bytes(trip_status)));
+
+                            ProgressDialog dialog = new ProgressDialog(this);
+                            dialog.setMessage("Writing card...");
+                            dialog.setCancelable(false);
+                            dialog.show();
+
+                            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+
+                            String finalClosing_trip_num_card = closing_trip_num_card;
+                            String finalAsset_number = asset_number;
+                            String finalNow = now;
+                            String finalTrip_status1 = trip_status;
+                            new Thread(() -> {
+
+                                boolean success =
+                                        dbcl.writeOrFail(this, tag, 18, dbcl.combineByteArrays(dbcl.stringTo3Bytes(hsd_card_str), dbcl.stringTo1Bytes("00"))) &&
+                                        dbcl.writeOrFail(this, tag, 25, dbcl.combineByteArrays(tripsheet_no_last2.getBytes(StandardCharsets.UTF_8), dbcl.stringTo2Bytes(finalTrip_status1))) &&
+                                        dbcl.writeOrFail(this, tag, 27, dbcl.combineByteArrays(dbcl.stringTo4Bytes(String.valueOf(desc_id_card)), dbcl.stringTo2Bytes(String.valueOf(final_route_id)))) &&
+                                        dbcl.writeOrFail(this, tag, 34, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(src_mob_id_card)), dbcl.stringTo2Bytes(TID))) &&
+                                        dbcl.writeOrFail(this, tag, 35, dbcl.stringTo4Bytes(String.valueOf(seconds)));
+
+                                runOnUiThread(() -> {
+                                    dialog.dismiss();
+
+                                    if (success) {
+                                        vibrator.vibrate(100);
+                                        Toast.makeText(this, "Card written successfully ✅", Toast.LENGTH_SHORT).show();
+
+                                        trip_close.put("tripsheet_no", finalClosing_trip_num_card);
                                         trip_close.put("trip_type", "RFID");
-                                        trip_close.put("initial_route_id", String.valueOf(routeId));
-                                        trip_close.put("final_route_id", String.valueOf(routeId));
+                                        trip_close.put("initial_route_id", String.valueOf(route_id_card));
+                                        trip_close.put("final_route_id", String.valueOf(final_route_id));
                                         trip_close.put("rfid_id", rfid_card);
                                         trip_close.put("truck_id", truckid);
-                                        trip_close.put("truck_no", finalAsset_number1);
-                                        trip_close.put("vendor_id", String.valueOf(vendorId));
-                                        trip_close.put("ore_id", String.valueOf(descriptionId));
+                                        trip_close.put("truck_no", finalAsset_number);
+                                        trip_close.put("vendor_id", String.valueOf(vendor_id_card));
+                                        trip_close.put("ore_id", String.valueOf(desc_id_card));
                                         trip_close.put("status", trip_status_save);
-                                        trip_close.put("src_time", srctime);
+                                        trip_close.put("src_time", src_time_card);
                                         trip_close.put("src_mobile", String.valueOf(src_mob_id_card));
                                         trip_close.put("dest_time", srctime);
                                         trip_close.put("dest_mobile", src_mob);
-                                        trip_close.put("created_at", finalNow1);
-                                        trip_close.putNull("wb_src_time");
-                                        trip_close.putNull("wb_src_gross_login");
-                                        trip_close.putNull("src_tare_wt_time");
-                                        trip_close.putNull("wb_src_tare_login");
-                                        trip_close.putNull("wb_dest_time");
-                                        trip_close.putNull("wb_dest_gross_login");
-                                        trip_close.putNull("dest_tare_wt_time");
-                                        trip_close.putNull("wb_dest_tare_login");
-                                        trip_close.putNull("src_gross_wt");
-                                        trip_close.putNull("src_tare_wt");
-                                        trip_close.putNull("dest_gross_wt");
-                                        trip_close.putNull("dest_tare_wt");
+                                        trip_close.put("created_at", finalNow);
+                                        trip_close.put("wb_src_time", wb_src_time_card);
+                                        trip_close.put("wb_src_gross_login", wb_src_gr_login_card);
+                                        trip_close.put("src_tare_wt_time", tare_wt_time_card);
+                                        trip_close.put("wb_src_tare_login", tare_wt_wb_log_card);
+                                        trip_close.put("wb_dest_time", wb_dest_time_card);
+                                        trip_close.put("wb_dest_gross_login", wb_dest_gr_login_card);
+                                        trip_close.put("dest_tare_wt_time", dest_tare_wt_time_card);
+                                        trip_close.put("wb_dest_tare_login", wb_dest_tare_login_card);
+                                        trip_close.put("src_gross_wt", src_gr_wt_card);
+                                        trip_close.put("src_tare_wt", tare_wt_card);
+                                        trip_close.put("dest_gross_wt", dest_gr_wt_card);
+                                        trip_close.put("dest_tare_wt", dest_tare_wt_card);
+                                        trip_close.put("hsd_bal", HSD_BAL);
+                                        trip_close.put("machine_id", machine_id_card);
+                                        trip_close.put("screening_plant_id", screening_plant_id_card);
+                                        trip_close.put("plant_input_product_id", plant_input_product_id_card);
 
-                                        Log.e("srctime",srctime+" "+tripstarttime);
+                                        if (saveTripsheet(finalClosing_trip_num_card, trip_close)) {
+                                            Toast.makeText(this, "Tripsheet closed successfully", Toast.LENGTH_SHORT).show();
+                                           dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Tripsheet closed successfully");
 
-
-                                        success = saveTripsheet(tripsheetno,trip_close);
-
-                                        if (success)
-                                        {
-                                            Toast.makeText(this, "Tripsheet saved successfully", Toast.LENGTH_SHORT).show();
-                                            showScrollableErrorDialog(MainActivity.this,"Success", "Tripsheet saved successfully");
-
-                                        } else
-                                        {
-                                            Toast.makeText(this, "Failed to save tripsheet", Toast.LENGTH_SHORT).show();
-
-                                            showScrollableErrorDialog(MainActivity.this,"Error", "Failed to save tripsheet");
+                                            trip_status_read = 2;
+                                        } else {
+                                            Toast.makeText(this, "Failed to close tripsheet", Toast.LENGTH_SHORT).show();
+                                            //background_main.setBackgroundColor(Color.RED);
+                                           dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to close tripsheet");
 
                                         }
                                     }
-                            });
 
-                        }).start();
+                                });
+
+                            }).start();
+
+                        } else {
+
+                            error += "WRONG DESTINATION\nPROCEED TO :- \n\n" + dbcl.get_subloc_name(dest_subloc_id_trip);
+
+                           dbcl.showScrollableErrorDialog(MainActivity.this, "Error", error);
+
+                        }
+                        nfca.close();
+
+                    } else {
+                        trip_status_save = "OPEN";
+                        trip_status = "01";
+
+                        if(operation_type==1)
+                        {
+                            trip_status = "03";
+                        }
+
+                        if (tare_wt_time_card!=null) {
+
+                            Date todaysdatetm = new Date();
+
+                            long diffMillis = todaysdatetm.getTime() - dbcl.date_time_FromSeconds(tare_wt_sec_card).getTime();
+                            long diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis);
+                            if (diffDays > ext_tare_validity_days) {
+                                error += "TARE WEIGHT WAS TAKEN " + diffDays + " DAYS BEFORE(VALID FOR "+ext_tare_validity_days+" DAYS). KINDLY GET THE TARE WEIGHT DONE.\n";
+                            }
+                        } else
+                        {
+                            error += "TARE WEIGHT TIME NOT FOUND\n";
+                        }
+
+                        Log.e("dest_sec_card", dest_sec_card + " ");
+                        Log.e("machine_start_date_time", machine_start_date_time + " ");
+
+
+                        if (machine_id.isEmpty()) {
+                            error += "MACHINE ID NOT FOUND.PLEASE TAP THE MACHINE CARD BEFORE ISSUING NEW TRIPS.\n";
+                        }
+
+                        if (!machine_start_date_time.isEmpty())
+                        {
+                            if (isToday(machine_start_date_time))
+                            {
+                                // ✅ OK
+                            } else {
+                                error += "PLEASE TAP THE MACHINE CARD BEFORE ISSUING NEW TRIPS\n";
+                            }
+                        } else {
+                            error += "PLEASE TAP THE MACHINE CARD\n";
+                        }
+
+                        if (dest_sec_card > 0) {
+                            Date desttimedate = dbcl.date_time_FromSeconds(dest_sec_card);
+
+                            error += dbcl.checktime(desttimedate);
+
+                        }
+
+
+                        pageData = dbcl.readPage(nfca, 11);
+                        String Asset_id = dbcl.bytesToString(pageData, 0, 3);
+                        int asset_status = Integer.parseInt(dbcl.bytesToString(pageData, 3, 1));
+
+                        Log.d("NFC_READ", "11 : asset number " + Asset_id + " " + asset_status);
+
+                        if (asset_status == 0) {
+                            //error += "VEHICLE IS INACTIVE\n";
+                        }
+
+
+                        Date insurance_validity = null;
+                        Date rdtax_validity = null;
+                        Date fitness_validity = null;
+                        Date puc_validity = null;
+
+                        Calendar todayCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
+                        Date today = todayCal.getTime();
+
+                        pageData = dbcl.readPage(nfca, 16);
+                        int ins_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int rdt_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+
+                        pageData = dbcl.readPage(nfca, 17);
+                        int fit_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                        int puc_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+
+                        if (ins_val_seconds > 0)
+                        {
+                            insurance_validity = dbcl.dateFromDays(ins_val_seconds);
+                            if (insurance_validity.before(today)) {
+                                error += "INSURANCE VALIDITY IS OVER\n";
+                            }
+                        } else
+                        {
+                            error += "INSURANCE VALIDITY DATE NOT FOUND\n";
+                        }
+                        Log.d("NFC_READ", "25 : ins_val_seconds " + ins_val_seconds + " insurance_validity" + insurance_validity);
+
+                        if(LOCATION_ID_MOBILE != destinationId )
+                        {
+                            if (rdt_val_seconds > 0) {
+                                rdtax_validity = dbcl.dateFromDays(rdt_val_seconds);
+                                if (rdtax_validity.before(today)) {
+                                    error += "ROAD TAX VALIDITY IS OVER\n";
+                                }
+                            } else {
+                                error += "ROAD TAX VALIDITY DATE NOT FOUND\n";
+                            }
+
+                            Log.d("NFC_READ", "25 : rdt_val_seconds " + rdt_val_seconds + " rdtax_validity" + rdtax_validity);
+
+
+                            if (fit_val_seconds > 0) {
+                                fitness_validity = dbcl.dateFromDays(fit_val_seconds);
+                                if (fitness_validity.before(today)) {
+                                    error += "FITNESS VALIDITY IS OVER\n";
+                                }
+                            } else {
+                                error += "FITNESS VALIDITY DATE NOT FOUND\n";
+                            }
+
+                            Log.d("NFC_READ", "25 : fit_val_seconds " + fit_val_seconds + " fitness_validity" + fitness_validity);
+
+                            if (puc_val_seconds > 0) {
+                                puc_validity = dbcl.dateFromDays(puc_val_seconds);
+                                if (puc_validity.before(today)) {
+                                    error += "PUC VALIDITY IS OVER\n";
+                                }
+                            } else {
+                                error += "PUC VALIDITY DATE NOT FOUND\n";
+                            }
+
+                            Log.d("NFC_READ", "25 : puc_val_seconds " + puc_val_seconds + " puc_validity" + puc_validity);
+                        }
+                        nfca.close();
+
+                        if (!"".equals(error))
+                        {
+                           dbcl.showScrollableErrorDialog(MainActivity.this, "Error", error);
+
+                        } else
+                        {
+                            /***************READ CARD OVER ******************/
+                            ProgressDialog dialog = new ProgressDialog(this);
+                            dialog.setMessage("Writing card...");
+                            dialog.setCancelable(false);
+                            dialog.show();
+
+                            Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                            String finalCurrentDateMONTH = currentDateMONTH;
+                            String finalMonthyear = monthyear;
+                            String finalAsset_number1 = asset_number;
+                            String finalNow1 = now;
+                            String finalTrip_status = trip_status;
+                            new Thread(() -> {
+
+                                runOnUiThread(() -> {
+
+                                    if(operation_type==0)
+                                    {
+                                        dbcl.writeStringToTag(tag, mob_id, 22, 0);
+                                        dbcl.writeStringToTag(tag, finalCurrentDateMONTH, 23, 0);
+                                        dbcl.writeStringToTag(tag, finalMonthyear + part1, 24, 0);
+                                        //dbcl.writeOrFail(this, tag, 19, dbcl.combineByteArrays(dbcl.stringTo2Bytes(machine_id), dbcl.stringTo2Bytes("00"))) &&
+                                        //dbcl.writeOrFail(this, tag, 20, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
+                                    }
+                                    boolean success =
+
+                                    dbcl.writeOrFail(this, tag, 25, dbcl.combineByteArrays(part2.getBytes(StandardCharsets.UTF_8), dbcl.stringTo2Bytes(finalTrip_status))) &&
+                                            dbcl.writeOrFail(this, tag, 26, dbcl.stringTo4Bytes(String.valueOf(seconds))) &&
+                                            dbcl.writeOrFail(this, tag, 27, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(descriptionId)), dbcl.stringTo2Bytes(String.valueOf(routeId)))) &&
+
+                                            dbcl.writeOrFail(this, tag, 28, dbcl.stringTo4Bytes("00")) &&
+                                            dbcl.writeOrFail(this, tag, 29, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
+                                            dbcl.writeOrFail(this, tag, 30, dbcl.stringTo4Bytes("00")) &&
+                                            dbcl.writeOrFail(this, tag, 31, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
+                                            dbcl.writeOrFail(this, tag, 32, dbcl.stringTo4Bytes("00")) &&
+                                            dbcl.writeOrFail(this, tag, 33, dbcl.combineByteArrays(dbcl.stringTo2Bytes("00"), dbcl.stringTo2Bytes("00"))) &&
+
+                                            dbcl.writeOrFail(this, tag, 34, dbcl.combineByteArrays(dbcl.stringTo2Bytes(TID), dbcl.stringTo2Bytes("00"))) &&
+                                            dbcl.writeOrFail(this, tag, 35, dbcl.stringTo4Bytes("00")) &&
+                                            dbcl.writeOrFail(this, tag, 36, dbcl.stringTo4Bytes(String.valueOf(seconds))) &&
+                                            dbcl.writeOrFail(this, tag, 37, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(vendorId)), dbcl.stringTo2Bytes(machine_id))) &&
+                                            dbcl.writeOrFail(this, tag, 38, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(screening_plant_id)), dbcl.stringTo2Bytes(String.valueOf(plant_input_product_id))));
+
+                                    dialog.dismiss();
+
+                                    if (success) {
+                                        vibrator.vibrate(100);
+                                        Toast.makeText(this, "Card written successfully ✅", Toast.LENGTH_SHORT).show();
+
+                                        if(operation_type==0)
+                                        {
+                                            trip_close.put("tripsheet_no", tripsheetno);
+                                            trip_close.put("trip_type", "RFID");
+                                            trip_close.put("initial_route_id", String.valueOf(routeId));
+                                            trip_close.put("final_route_id", String.valueOf(routeId));
+                                            trip_close.put("rfid_id", rfid_card);
+                                            trip_close.put("truck_id", truckid);
+                                            trip_close.put("truck_no", finalAsset_number1);
+                                            trip_close.put("vendor_id", String.valueOf(vendorId));
+                                            trip_close.put("ore_id", String.valueOf(descriptionId));
+                                            trip_close.put("status", trip_status_save);
+                                            trip_close.put("src_time", srctime);
+                                            trip_close.put("src_mobile", TID);
+                                            //trip_close.put("dest_time", srctime);
+                                            //trip_close.put("dest_mobile", src_mob);
+                                            trip_close.put("created_at", finalNow1);
+                                            trip_close.put("machine_id", machine_id);
+                                            trip_close.put("screening_plant_id", screening_plant_id);
+                                            trip_close.put("plant_input_product_id", plant_input_product_id);
+
+                                            trip_close.putNull("wb_src_time");
+                                            trip_close.putNull("wb_src_gross_login");
+                                            trip_close.putNull("src_tare_wt_time");
+                                            trip_close.putNull("wb_src_tare_login");
+                                            trip_close.putNull("wb_dest_time");
+                                            trip_close.putNull("wb_dest_gross_login");
+                                            trip_close.putNull("dest_tare_wt_time");
+                                            trip_close.putNull("wb_dest_tare_login");
+                                            trip_close.putNull("src_gross_wt");
+                                            trip_close.putNull("src_tare_wt");
+                                            trip_close.putNull("dest_gross_wt");
+                                            trip_close.putNull("dest_tare_wt");
+
+                                            Log.e("srctime", srctime + " " + tripstarttime);
+
+
+                                            boolean tripsuccess = saveTripsheet(tripsheetno, trip_close);
+
+                                            if (tripsuccess) {
+                                                Toast.makeText(this, "Tripsheet saved successfully", Toast.LENGTH_SHORT).show();
+                                               dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Tripsheet saved successfully");
+
+                                            } else {
+                                                Toast.makeText(this, "Failed to save tripsheet", Toast.LENGTH_SHORT).show();
+
+                                               dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to save tripsheet");
+
+                                            }
+                                        }else
+                                        {
+                                           dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Trip successfully written on the card");
+                                        }
+                                    } else
+                                    {
+                                        Toast.makeText(this, "Failed to write card.Please retry again", Toast.LENGTH_SHORT).show();
+
+                                       dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to write card.Please retry again");
+
+                                    }
+                                });
+
+                            }).start();
+                        }
                     }
+
+                    card_details.put("Trip Status", dbcl.getTripStatusText(trip_status_read));
+                }else if (asset_type == 2)
+                {
+                    nfca.close();
+                    String finalAsset_number2 = asset_number;
+                    String finalNow2 = now;
+                    new Thread(() -> {
+
+                        boolean success =
+                                dbcl.writeOrFail(this, tag, 19, dbcl.combineByteArrays(dbcl.stringTo2Bytes(String.valueOf(sublocationId)), dbcl.stringTo2Bytes("00"))) &&
+                                dbcl.writeOrFail(this, tag, 20, dbcl.stringTo4Bytes(String.valueOf(seconds)));
+
+                        runOnUiThread(() -> {
+
+
+                            if (success) {
+
+                                SQLiteDatabase dbinst = dbcl.getWritableDatabase();
+
+                                ContentValues values = new ContentValues();
+                                values.put("sublocation_id", sublocationId);
+                                values.put("src_mobile", TID);
+                                values.put("date_time", finalNow2);
+                                values.put("registration_no", finalAsset_number2);
+                                values.put("machine_id", truckid);
+                                try
+                                {
+                                    long result = dbinst.insert("machinery", null, values);
+
+                                    if (result == -1) {
+                                        // ❌ Insert failed
+                                       dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to setup machinery");
+                                    } else {
+                                        // ✅ Insert success
+                                       dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Machinery setup was successful");
+                                        Cursor cursor = dbcl.getSetupnames();  // your existing query
+                                        showSetupDetails(cursor,this);
+
+                                        dbcl.saveUidAndLocationToPrefs(MainActivity.this);
+
+                                        SharedPreferences prefs = getSharedPreferences("APP_PREFS", MODE_PRIVATE);
+
+                                        mobileuid = prefs.getString("UID", "");
+                                        TID = prefs.getString("TID", "");
+                                        machine_id = prefs.getString("machine_id", "");
+                                        machine_start_date_time = prefs.getString("date_time", "");
+                                        int_tare_validity_days = prefs.getInt("int_tare_validity_days",0);
+                                        ext_tare_validity_days = prefs.getInt("ext_tare_validity_days", 0);
+                                        screening_plant_id = prefs.getInt("screening_plant_id", 0);
+                                        plant_input_product_id = prefs.getInt("plant_input_product_id", 0);
+                                    }
+                                } catch (Exception e)
+                                {
+                                    Log.e("DB_EXCEPTION", e.getMessage());
+                                   dbcl.showScrollableErrorDialog(MainActivity.this, "Exception", e.getMessage());
+                                }
+                            } else
+                            {
+                                // ✅ Insert success
+                               dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Error while writing machinery card");
+                            }
+
+                        });
+
+                    }).start();
                 }
-
-                card_details.put("Trip Status",getTripStatusText(trip_status_read));
-                onRfidTapped(card_details,error);
-
-                Log.d("NFC_READ", "25 : trip_status_read "+trip_status_read+" ");
-
+                dbcl.onRfidTapped(cardDetails,card_details,error,handler,hideRunnable,detailsContainer,MainActivity.this);
             } catch (Exception e)
             {
                 e.printStackTrace();
-                showScrollableErrorDialog(MainActivity.this,"Error", e.getMessage());
+               dbcl.showScrollableErrorDialog(MainActivity.this,"Error", e.getMessage());
             } finally
             {
                 try
@@ -871,7 +1021,7 @@ public class MainActivity extends AppCompatActivity {
                     nfca.close();
                 } catch (Exception ignored)
                 {
-                    showScrollableErrorDialog(MainActivity.this,"Error", ignored.getMessage());
+                   dbcl.showScrollableErrorDialog(MainActivity.this,"Error", ignored.getMessage());
                 }
             }
 
@@ -882,12 +1032,13 @@ public class MainActivity extends AppCompatActivity {
 
                 JSONArray tripsheets = dbcl.getTripsheetsForUpload(this);
 
-                if (tripsheets.length() == 0) {
+                if (tripsheets.length() == 0)
+                {
                     Log.d("UPLOAD", "No pending tripsheets");
                     return;
                 }
 
-                boolean successup = dbcl.uploadTripsheets(tripsheets);
+                boolean successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
 
                 if (successup) {
                     List<Long> uploadedIds = new ArrayList<>();
@@ -920,17 +1071,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-    private String getTripStatusText(int trip_status_read) {
-
-        switch (trip_status_read) {
-            case 1:
-                return "Open";
-            case 2:
-                return "Closed";
-            default:
-                return "Unknown (" + trip_status_read + ")";
-        }
-    }
     public static byte[] integerTo2Bytes(Integer value) {
         // max value : 65535 (0xFFFF)
 
@@ -947,45 +1087,7 @@ public class MainActivity extends AppCompatActivity {
                 (byte) (value & 0xFF)
         };
     }
-    public static void showScrollableErrorDialog(Context context, String title, String message) {
-
-        if (currentDialog != null && currentDialog.isShowing()) {
-            currentDialog.dismiss();
-            currentDialog = null;
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(title);
-
-        // Create TextView
-        TextView textView = new TextView(context);
-        textView.setText(message);
-        textView.setTextSize(20);
-        textView.setTypeface(Typeface.DEFAULT_BOLD);
-        textView.setPadding(40, 30, 40, 30);
-        textView.setTextIsSelectable(true);
-
-        // Wrap TextView in ScrollView
-        ScrollView scrollView = new ScrollView(context);
-        scrollView.addView(textView);
-
-        builder.setView(scrollView);
-        builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
-        builder.setCancelable(false);
-
-        currentDialog = builder.show();
-
-        // 🎨 Color the WHOLE dialog window
-        if (title != null) {
-            if (title.equalsIgnoreCase("error")) {
-                currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#D32F2F"))); // red
-                textView.setTextColor(Color.WHITE);
-            } else if (title.equalsIgnoreCase("success")) {
-                currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#388E3C"))); // green
-                textView.setTextColor(Color.WHITE);
-            }
-            // else: keep default theme background
-        }
-    }
+    
     public boolean  saveTripsheet(String tripsheetno,ContentValues trip_data)
     {
         dbclass dbs = new dbclass(this);
@@ -1042,11 +1144,44 @@ public class MainActivity extends AppCompatActivity {
             dbcl.addRow(context,container, "Destination Location", cursor.getString(cursor.getColumnIndexOrThrow("location_name")));
             dbcl.addRow(context,container, "Destination Sublocation", cursor.getString(cursor.getColumnIndexOrThrow("dest_subloc")));
             dbcl.addRow(context,container, "Route", cursor.getString(cursor.getColumnIndexOrThrow("route_name")));
+            dbcl.addRow(context,container, "Other sublocations", cursor.getString(cursor.getColumnIndexOrThrow("old_route")));
+            dbcl.addRow(context,container, "New Route1", cursor.getString(cursor.getColumnIndexOrThrow("new_route1")));
+            //dbcl.addRow(context,container, "Route2", cursor.getString(cursor.getColumnIndexOrThrow("new_route2")));
+            //dbcl.addRow(context,container, "Route3", cursor.getString(cursor.getColumnIndexOrThrow("new_route3")));
+            //dbcl.addRow(context,container, "Route4", cursor.getString(cursor.getColumnIndexOrThrow("new_route4")));
+            dbcl.addRow(context,container, "Machine", cursor.getString(cursor.getColumnIndexOrThrow("registration_no")));
+            dbcl.addRow(context,container, "Machine Start Time", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("machinery_st_tm"))));
+            dbcl.addRow(context,container, "Screening plant", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("screeningplant"))));
+            dbcl.addRow(context,container, "Plant input product ", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("inputore"))));
 
             cardSetupDetails.setVisibility(View.VISIBLE);
             cursor.close();
         } else {
             cardSetupDetails.setVisibility(View.GONE);
+        }
+    }
+
+    public boolean isToday(String machine_start_date_time) {
+        if (machine_start_date_time == null || machine_start_date_time.isEmpty()) {
+            return false;
+        }
+
+        try {
+            // DB format
+            SimpleDateFormat dbFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            Date dbDate = dbFormat.parse(machine_start_date_time);
+
+            // Get today's date
+            Date today = new Date();
+
+            // Compare only date (ignore time)
+            SimpleDateFormat dateOnly = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
+
+            return dateOnly.format(dbDate).equals(dateOnly.format(today));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 

@@ -6,4 +6,5 @@
     </style>
 
     <style name="Theme.Rfid" parent="Base.Theme.Rfid" />
+
 </resources>

@@ -326,7 +326,7 @@ public class rfid_issue extends AppCompatActivity {
                 if (status) {
 
                     runOnUiThread(() -> {
-                        showScrollableErrorDialog(rfid_issue.this, "Success", message);
+                       dbc.showScrollableErrorDialog(rfid_issue.this, "Success", message);
                         clearfields();
                         fetchAssetMaster("");
                         showAssetDetails();
@@ -334,7 +334,7 @@ public class rfid_issue extends AppCompatActivity {
                     });
 
                 } else {
-                    runOnUiThread(() -> showScrollableErrorDialog(rfid_issue.this, "Error", message));
+                    runOnUiThread(() ->dbc.showScrollableErrorDialog(rfid_issue.this, "Error", message));
                 }
 
 
@@ -407,6 +407,8 @@ public class rfid_issue extends AppCompatActivity {
                         asset_type = 02;
                     } else if ("BARGE".equals(selectedAsset.assetType)) {
                         asset_type = 03;
+                    } else if ("BOWSER".equals(selectedAsset.assetType)) {
+                        asset_type = 04;
                     }
 
                     int hsdval = (int) (selectedAsset.hsd * 100);
@@ -433,6 +435,10 @@ public class rfid_issue extends AppCompatActivity {
 
 
                             Log.e("secondsFromTargetDate"," "+dbc.secondsFromTargetDate(selectedAsset.tare_weight_time));
+                            if(asset_type==4)
+                            {
+                                //dbc.writeOrFail(rfid_issue.this, tag, 22, dbc.combineByteArrays(dbc.stringTo3Bytes(String.valueOf("15046")),dbc.stringTo1Bytes("")));
+                            }
 
                     boolean ok = dbc.writeOrFail(rfid_issue.this, tag, 10, dbc.combineByteArrays(dbc.stringTo2Bytes(String.valueOf(vendor_id)), dbc.stringTo2Bytes("00"))) &&
                             dbc.writeOrFail(rfid_issue.this, tag, 11, dbc.combineByteArrays(dbc.stringTo3Bytes(String.valueOf(assetId)), dbc.stringTo1Bytes(String.valueOf(status)))) &&
@@ -459,16 +465,16 @@ public class rfid_issue extends AppCompatActivity {
                         sendRfidToApi(rfid_card_number);
                     }else
                     {
-                        showScrollableErrorDialog(rfid_issue.this, "Error", "Failed to write card.");
+                       dbc.showScrollableErrorDialog(rfid_issue.this, "Error", "Failed to write card.");
                     }
                 }else
                 {
-                    showScrollableErrorDialog(rfid_issue.this, "Error", "This RFID card is already issued to the vehicle number\n"+asset_number.trim()+"\nIf you want to reuse it again then please clear the card first and then use this option to rewrite the card again.");
+                   dbc.showScrollableErrorDialog(rfid_issue.this, "Error", "This RFID card is already issued to the vehicle number\n"+asset_number.trim()+"\nIf you want to reuse it again then please clear the card first and then use this option to rewrite the card again.");
                 }
                 Log.e("NFC", "Tag detected");
             } catch (Exception e) {
                 e.printStackTrace();
-                showScrollableErrorDialog(rfid_issue.this, "Error", e.getMessage());
+               dbc.showScrollableErrorDialog(rfid_issue.this, "Error", e.getMessage());
             } finally
             {
                 try
@@ -476,7 +482,7 @@ public class rfid_issue extends AppCompatActivity {
                     //nfca.close();
                 } catch (Exception ignored)
                 {
-                    showScrollableErrorDialog(rfid_issue.this, "Error", ignored.getMessage());
+                   dbc.showScrollableErrorDialog(rfid_issue.this, "Error", ignored.getMessage());
                 }
             }
         }

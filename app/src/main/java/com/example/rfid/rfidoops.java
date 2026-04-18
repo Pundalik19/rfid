@@ -73,7 +73,7 @@ public class rfidoops extends AppCompatActivity {
     LinearLayout detailsContainer;
 
     private static AlertDialog currentDialog;
-    Button btnRead, btnClear, btnIssue,btnSetup;
+    CardView btnRead, btnClear, btnIssue,btnSetup,setup_screening_plant,change_dest,bowserops,bargetrips;
     TextView txtData;
 
     Tag currentTag;
@@ -88,7 +88,11 @@ public class rfidoops extends AppCompatActivity {
         btnClear = findViewById(R.id.btnClear);
         btnIssue = findViewById(R.id.btnIssue);
         btnSetup = findViewById(R.id.btnSetup);
+        setup_screening_plant = findViewById(R.id.setup_screening_plant);
+        change_dest = findViewById(R.id.change_desti);
+        bowserops = findViewById(R.id.bowserops);
         txtData = findViewById(R.id.txtData);
+        bargetrips = findViewById(R.id.bargetrips);
         detailsContainer = findViewById(R.id.detailsCo);
         cardDetails = findViewById(R.id.cardDetails);
 
@@ -146,6 +150,26 @@ public class rfidoops extends AppCompatActivity {
             Intent i = new Intent(this, rfid_issue.class);
             startActivity(i);
         });
+
+        setup_screening_plant.setOnClickListener(v -> {
+            Intent i = new Intent(this, screening_plant.class);
+            startActivity(i);
+        });
+
+        change_dest.setOnClickListener(v -> {
+            Intent i = new Intent(this, change_dest.class);
+            startActivity(i);
+        });
+
+        bowserops.setOnClickListener(v -> {
+            Intent i = new Intent(this, xbowser.class);
+            startActivity(i);
+        });
+        bargetrips.setOnClickListener(v -> {
+            Intent i = new Intent(this, xbargetrips.class);
+            startActivity(i);
+        });
+
 
         pendingIntent = PendingIntent.getActivity(
                 this, 0,
@@ -254,6 +278,9 @@ public class rfidoops extends AppCompatActivity {
             }else if(asset_type==3)
             {
                 asset_type_display="Barge";
+            }else if(asset_type==4)
+            {
+                asset_type_display="Bowser";
             }else
             {
                 asset_type_display="Na";
@@ -365,16 +392,42 @@ public class rfidoops extends AppCompatActivity {
             Log.e("HSD_BAL"," "+HSD_BAL);
 
 
+            pageData = dbcl.readPage(nfca, 20);
+            int machinery_st_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            String machinery_st_time_card;
+            if(machinery_st_sec_card > 0)
+            {
+                machinery_st_time_card =  dbcl.display_format_date_time(dbcl.date_time_FromSeconds(machinery_st_sec_card));
+
+            } else {
+                machinery_st_time_card = null;
+            }
+
+
             String closing_trip_num_card ="";
-            pageData = dbcl.readPage(nfca, 22);
-            Log.d("NFC_READ", "22  "+Arrays.toString(pageData));
-            String closing_trip_num_01 = new String(pageData, StandardCharsets.UTF_8).trim();
-            pageData = dbcl.readPage(nfca, 23);
-            Log.d("NFC_READ", "23  "+Arrays.toString(pageData));
-            String closing_trip_num_02 = new String(pageData, StandardCharsets.UTF_8).trim();
-            pageData = dbcl.readPage(nfca, 24);
-            Log.d("NFC_READ", "24  "+Arrays.toString(pageData));
-            String closing_trip_num_03 = new String(pageData, StandardCharsets.UTF_8).trim();
+            String closing_trip_num_01="";
+            String closing_trip_num_02 ="";
+            String closing_trip_num_03 ="";
+            double qtyValue = 0.00;
+            if(asset_type==4)
+            {
+                pageData = dbcl.readPage(nfca, 22);
+                int HSDCARD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+
+                qtyValue = HSDCARD / 100.0;   // 👈 important: 100.0 (not 100)
+            }
+            {
+                pageData = dbcl.readPage(nfca, 22);
+                Log.d("NFC_READ", "22  "+Arrays.toString(pageData));
+                closing_trip_num_01 = new String(pageData, StandardCharsets.UTF_8).trim();
+                pageData = dbcl.readPage(nfca, 23);
+                Log.d("NFC_READ", "23  "+Arrays.toString(pageData));
+                closing_trip_num_02 =new String(pageData, StandardCharsets.UTF_8).trim();
+                pageData = dbcl.readPage(nfca, 24);
+                Log.d("NFC_READ", "24  "+Arrays.toString(pageData));
+                closing_trip_num_03 = new String(pageData, StandardCharsets.UTF_8).trim();
+            }
+
 
             pageData = dbcl.readPage(nfca, 25);
             String tripsheet_no_last2  = new String(pageData, 0, 2);//bytesToString(pageData, 0, 2);
@@ -470,6 +523,11 @@ public class rfidoops extends AppCompatActivity {
 
             pageData = dbcl.readPage(nfca, 37);
             int vendor_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+            int machine_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+
+            pageData = dbcl.readPage(nfca, 38);
+            int scrreening_plant_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+            int plant_input_product_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
 
 
             cardData.put("Asset Number", asset_number);
@@ -477,6 +535,7 @@ public class rfidoops extends AppCompatActivity {
             cardData.put("Asset Status", asset_status_display);
             cardData.put("Asset Type", asset_type_display);
             cardData.put("Gross Weight Capacity", String.valueOf(gross_wt_capacity));
+            cardData.put("Machinery Start Date Time", machinery_st_time_card);
 
             cardData.put("Card Issue Date Time", card_iss_time_card);
             cardData.put("Tare Weight Time", tare_wt_time_card);
@@ -508,6 +567,10 @@ public class rfidoops extends AppCompatActivity {
 
             cardData.put("Source Mobile", dbcl.get_mob_name(src_mob_id_card));
             cardData.put("Vendor", dbcl.get_vendor_name(vendor_id_card));
+            cardData.put("Machine", dbcl.get_asset_number(String.valueOf(machine_id_card)));
+            cardData.put("Screening Plant", dbcl.get_asset_number(String.valueOf(scrreening_plant_id_card)));
+            cardData.put("Plant input product", dbcl.get_asset_number(String.valueOf(plant_input_product_id_card)));
+            cardData.put("Bowser qty", String.valueOf(qtyValue));
             nfca.close();
 
             detailsContainer.removeAllViews();

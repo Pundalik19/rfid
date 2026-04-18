@@ -28,6 +28,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
@@ -87,6 +88,7 @@ public class activity_login extends AppCompatActivity {
             return;
         }
 
+        Log.e("isInternetAvailable"," "+isInternetAvailable());
         if (!isInternetAvailable()) {
             //Toast.makeText(this, "No Internet Connection", Toast.LENGTH_SHORT).show();
             db.showScrollableErrorDialog(this, "Error","No Internet Connection");
@@ -94,7 +96,7 @@ public class activity_login extends AppCompatActivity {
         }
 
         setLoading(true);
-
+        Log.e("isInternetAvailable"," "+isMobileLoginValid(username, password));
         if (isMobileLoginValid(username, password)) {
             startActivity(new Intent(this, rfidoops.class));
             finish();
@@ -116,8 +118,9 @@ public class activity_login extends AppCompatActivity {
 
     private void authenticateFromServer(String username, String password) {
 
-        String url = ApiConfig.MOBILE_LOGIN;
-
+        String url = ApiConfig.MOBILE_LOGINS;
+        String[] parts = url.split("#");
+        url = parts[0];
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> {
                     try {
@@ -125,17 +128,36 @@ public class activity_login extends AppCompatActivity {
                         boolean status = obj.optBoolean("status", false);
                         String message = obj.optString("message", "Unknown error");
 
+
                         if (status) {
 
-                            JSONObject data = obj.getJSONObject("data");
+                            JSONArray dataArray = obj.getJSONArray("data");
+
+                            for (int i = 0; i < dataArray.length(); i++) {
+                                JSONObject data = dataArray.getJSONObject(i);
+
+                                saveLogin(
+                                        username,
+                                        password,
+                                        data.getString("u_id"),
+                                        data.getString("location_id"),
+                                        data.getString("status"),
+                                        data.getString("int_tare_validity_days"),
+                                        data.getString("ext_tare_validity_days")
+                                );
+                            }
+
+                            /*JSONObject data = obj.getJSONObject("data");
 
                             saveLogin(
                                     username,
                                     password,
                                     data.getString("u_id"),
                                     data.getString("location_id"),
-                                    data.getString("status")
-                            );
+                                    data.getString("status"),
+                                    data.getString("int_tare_validity_days"),
+                                    data.getString("ext_tare_validity_days")
+                            );*/
 
                             startActivity(new Intent(this, sync.class));
                             finish();
@@ -157,6 +179,7 @@ public class activity_login extends AppCompatActivity {
                     //error.getMessage();
                     String errorMsg = "";
                     setLoading(false);
+                    Log.e("error",error+" ");
                     if (error.networkResponse != null) {
                         int statusCode = error.networkResponse.statusCode;
 
@@ -213,7 +236,7 @@ public class activity_login extends AppCompatActivity {
         Volley.newRequestQueue(this).add(request);
     }
 
-    private void saveLogin(String login, String password, String u_id, String locationId, String status) {
+    private void saveLogin(String login, String password, String u_id, String locationId, String status,String int_tare_validity_days,String ext_tare_validity_days) {
         SQLiteDatabase dbw = db.getWritableDatabase();
         ContentValues cv = new ContentValues();
 
@@ -222,6 +245,8 @@ public class activity_login extends AppCompatActivity {
         cv.put("u_id", u_id);
         cv.put("location_id", locationId);
         cv.put("status", status);
+        cv.put("int_tare_validity_days", int_tare_validity_days);
+        cv.put("ext_tare_validity_days", ext_tare_validity_days);
         cv.put("created_at", getCurrentDateTime());
 
         dbw.insertWithOnConflict("mobile_logins", null, cv, SQLiteDatabase.CONFLICT_REPLACE);

@@ -121,11 +121,11 @@ public class setup extends AppCompatActivity {
 
         }
 
-        String locationIdsp = prefs.getString("LOCATION_ID", "");
+        Long locationIdsp = prefs.getLong("LOCATION_ID", 0);
 
         Log.e("locationIdsp"," "+locationIdsp);
 
-        loadLocations(locationIdsp,spLocation);
+        loadLocations(String.valueOf(locationIdsp),spLocation);
         loadProducts(0);
         loadVendors(0,vendorId);
         loadDestloc(0, destinationId);

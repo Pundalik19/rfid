@@ -69,6 +69,8 @@ public class sync extends AppCompatActivity {
         apis.add(ApiConfig.GET_ROUTES);
         apis.add(ApiConfig.GET_VENDORS);
         apis.add(ApiConfig.GET_ORES);
+        apis.add(ApiConfig.MACHINEWORKINGHOURS);
+        apis.add(ApiConfig.MOBILE_LOGINS);
 
         int totalApis = apis.size();
 
@@ -155,8 +157,9 @@ public class sync extends AppCompatActivity {
         new Thread(() -> {
 
             JSONArray tripsheets = db.getTripsheetsForUpload(this);
+            JSONArray hsdTransactions = db.getHsdTransactions(this);
 
-            if (tripsheets.length() == 0) {
+            if (tripsheets.length() == 0 && hsdTransactions.length() == 0) {
                 runOnUiThread(() -> {
                     syncProgress.setProgress(100);
                     syncSubStatus.setText("No pending uploads");
@@ -165,8 +168,8 @@ public class sync extends AppCompatActivity {
                 return;
             }
 
-            boolean successup = db.uploadTripsheets(tripsheets);
-
+            boolean successup = db.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets") &&
+                                db.uploadTripsheets(hsdTransactions,ApiConfig.HSD_TRANSACTION_SAVE,"item_issues");
             runOnUiThread(() -> {
                 if (successup) {
                     syncProgress.setProgress(100);
@@ -200,41 +203,7 @@ public class sync extends AppCompatActivity {
         }
         db.showScrollableErrorDialog(sync.this, title, success ? "Sync completed successfully" : "Sync failed");
     }
-    private void startUpload2() {
 
-        new Thread(() -> {
-
-            JSONArray tripsheets = db.getTripsheetsForUpload(this);
-
-            if (tripsheets.length() == 0) {
-                runOnUiThread(() -> {
-                    syncProgress.setProgress(100);
-                    syncProgress.setVisibility(View.GONE);
-                    syncdata.setEnabled(true);
-                    //Toast.makeText(this, "Nothing to upload", Toast.LENGTH_SHORT).show();
-                    db.showScrollableErrorDialog(sync.this, "Info","Nothing to upload");
-                });
-                return;
-            }
-
-            boolean successup = db.uploadTripsheets(tripsheets);
-
-            runOnUiThread(() -> {
-                if (successup) {
-                    syncProgress.setProgress(100);
-                    //Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show();
-                    db.showScrollableErrorDialog(sync.this, "Success","Tripsheets uploaded");
-                } else {
-                    //Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show();
-                    db.showScrollableErrorDialog(sync.this, "Error","Upload failed");
-                }
-
-                syncProgress.setVisibility(View.GONE);
-                syncdata.setEnabled(true);
-            });
-
-        }).start();
-    }
     public void saveJsonToSQLite(String json,String tableNm) throws JSONException {
 
 
@@ -249,7 +218,8 @@ public class sync extends AppCompatActivity {
 
     public void insertDynamicData(dbclass db,
                                   String tableName,
-                                  JSONObject jsonObject) throws JSONException {
+                                  JSONObject jsonObject) throws JSONException
+    {
 
         SQLiteDatabase sqliteDb = db.getdb();
         ContentValues cv = new ContentValues();
