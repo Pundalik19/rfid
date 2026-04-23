@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class setup extends AppCompatActivity {
+public class setup extends activity_base {
     TextView txtStatus;
     EditText editMessage;
     Button btnWrite,btnWRfid;
@@ -296,8 +296,8 @@ public class setup extends AppCompatActivity {
             Log.e("descriptionId"," "+descriptionId);
             Log.e("destinationId"," "+destinationId);
             Log.e("routeId"," "+routeId);
-
-            if (sublocationId == -1 || vendorId == -1 || descriptionId == -1 || routeId == -1) {
+            // || vendorId == -1 || descriptionId == -1 || routeId == -1
+            if (sublocationId == -1) {
                 //Toast.makeText(this, "Please complete all selections", Toast.LENGTH_SHORT).show();
                 showScrollableErrorDialog(this, "Error","Please complete all selections");
                 return;

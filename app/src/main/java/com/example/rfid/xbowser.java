@@ -39,12 +39,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
-public class xbowser extends AppCompatActivity {
+
+public class xbowser extends activity_base {
     NfcAdapter nfcAdapter;
     List<SpinnerItem> bowser_stock_list;
     private static AlertDialog currentDialog;
@@ -328,7 +330,9 @@ public class xbowser extends AppCompatActivity {
     }
 
     private void readCard(Tag tag){
-        ContentValues card_details = new ContentValues();
+
+        LinkedHashMap<String, Object> card_details = new LinkedHashMap<>();
+
         try{
             Asset_id="";
             hsdbalasset = 0.00;
@@ -447,6 +451,9 @@ public class xbowser extends AppCompatActivity {
             {
                 nfca.close();
                 editTextQty.setText("");
+
+
+
                 card_details.put("Card No", rfid_card);
                 card_details.put("Vehicle No", asset_number);
                 card_details.put("Asset Type", asset_type_display);

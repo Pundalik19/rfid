@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
-public class rfidoops extends AppCompatActivity {
+public class rfidoops extends activity_base {
     Button syncbutton;
     LinkedHashMap<String, String> cardData = new LinkedHashMap<>();
     int trip_status_read;
@@ -385,12 +385,16 @@ public class rfidoops extends AppCompatActivity {
 
 
             pageData = dbcl.readPage(nfca, 18);
-            int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+            /*int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
 
             String HSD_BAL = String.valueOf(HSD/100);
 
-            Log.e("HSD_BAL"," "+HSD_BAL);
+            Log.e("HSD_BAL"," "+HSD_BAL);*/
 
+            int HSD = dbcl.bytesToInt(pageData, 0, 3);
+            Double hsd_card = HSD / 100.0;
+
+            String HSD_BAL = String.valueOf(hsd_card);
 
             pageData = dbcl.readPage(nfca, 20);
             int machinery_st_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
@@ -561,6 +565,10 @@ public class rfidoops extends AppCompatActivity {
 
             cardData.put("Destination WB Time", wb_dest_time_card);
             cardData.put("Destination Gross Weight", String.valueOf(dest_gr_wt_card));
+
+            cardData.put("Destination Tare Weight Time", String.valueOf(dest_tare_wt_time_card));
+            cardData.put("Destination Tare Weight", String.valueOf(dest_tare_wt_card));
+            cardData.put("Destination Tare Login", String.valueOf(wb_dest_tare_login_card));
 
             //cardData.put("Destination Tare Time", dest_tare_wt_time_card);
             //cardData.put("Destination Tare Weight", String.valueOf(dest_tare_wt_card));

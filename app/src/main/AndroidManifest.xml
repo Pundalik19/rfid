@@ -23,7 +23,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Rfid"
         tools:targetApi="31">
-
+        <activity
+            android:name=".activity_base"
+            android:exported="false" />
         <activity
             android:name=".change_dest"
             android:exported="false" />

@@ -49,7 +49,7 @@ public class activity_login extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         db = new dbclass(this);
-
+        db.trustEveryone();
         MaterialCardView card = findViewById(R.id.loginCard);
         TextView title = findViewById(R.id.titleText);
         TextView subtitle = findViewById(R.id.subtitleText);
@@ -137,6 +137,8 @@ public class activity_login extends AppCompatActivity {
                                 JSONObject data = dataArray.getJSONObject(i);
 
                                 saveLogin(
+                                        activity_login.this,
+                                        data.getString("id"),
                                         username,
                                         password,
                                         data.getString("u_id"),
@@ -146,18 +148,6 @@ public class activity_login extends AppCompatActivity {
                                         data.getString("ext_tare_validity_days")
                                 );
                             }
-
-                            /*JSONObject data = obj.getJSONObject("data");
-
-                            saveLogin(
-                                    username,
-                                    password,
-                                    data.getString("u_id"),
-                                    data.getString("location_id"),
-                                    data.getString("status"),
-                                    data.getString("int_tare_validity_days"),
-                                    data.getString("ext_tare_validity_days")
-                            );*/
 
                             startActivity(new Intent(this, sync.class));
                             finish();
@@ -236,10 +226,11 @@ public class activity_login extends AppCompatActivity {
         Volley.newRequestQueue(this).add(request);
     }
 
-    private void saveLogin(String login, String password, String u_id, String locationId, String status,String int_tare_validity_days,String ext_tare_validity_days) {
+    private void saveLogin(Context context,String id,String login, String password, String u_id, String locationId, String status,String int_tare_validity_days,String ext_tare_validity_days) {
         SQLiteDatabase dbw = db.getWritableDatabase();
         ContentValues cv = new ContentValues();
-
+        dbclass dbcl = new dbclass(context);
+        cv.put("id", dbcl.base64Decode(id));
         cv.put("login", login);
         cv.put("password", password);
         cv.put("u_id", u_id);

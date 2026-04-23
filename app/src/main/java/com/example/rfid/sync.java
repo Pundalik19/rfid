@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class sync extends AppCompatActivity {
+public class sync extends activity_base {
     dbclass db;
     Button syncdata;
     ProgressBar syncProgress;

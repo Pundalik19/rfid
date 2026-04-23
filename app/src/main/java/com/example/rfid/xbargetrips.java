@@ -30,7 +30,7 @@ import android.widget.TextView;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-public class xbargetrips extends AppCompatActivity {
+public class xbargetrips extends activity_base {
     NfcAdapter nfcAdapter;
     private IntentFilter[] filters;
     private String[][] techList;
@@ -238,8 +238,6 @@ public class xbargetrips extends AppCompatActivity {
                 card_details.put("Card No", rfid_card);
                 card_details.put("Vehicle No", asset_number);
                 card_details.put("Asset Type", asset_type_display);
-
-                dbcl.onRfidTapped(cardDetails, card_details, error, handler, hideRunnable, detailsContainer,this );
 
 
 

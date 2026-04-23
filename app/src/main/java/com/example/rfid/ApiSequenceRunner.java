@@ -68,7 +68,8 @@ public class ApiSequenceRunner {
 
         if (req_method.equalsIgnoreCase("POST")) {
             method = Request.Method.POST;
-        } else {
+        } else
+        {
             method = Request.Method.GET; // default
         }
         Log.e("API_CALL", "Calling → " + url + " | Table → " + tableName);

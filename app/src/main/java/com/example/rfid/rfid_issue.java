@@ -13,6 +13,8 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.NfcA;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -36,11 +38,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class rfid_issue extends AppCompatActivity {
+public class rfid_issue extends activity_base {
 
     AutoCompleteTextView etVehicleNo;
     CardView cardDetails;
-    TextView tvOwner, tvVendor, tvType, tvRFID,tvTareweight;
+    TextView tvOwner, tvVendor, tvType, tvRFID,tvTareweight,tvTap;
     Button btnIssue;
 
     dbclass dbc;
@@ -54,6 +56,8 @@ public class rfid_issue extends AppCompatActivity {
     String rfid_card_number="";
 
     boolean isReadyToWrite = false;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable timeoutRunnable;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,9 +71,9 @@ public class rfid_issue extends AppCompatActivity {
         tvRFID = findViewById(R.id.tvRFID);
         tvTareweight = findViewById(R.id.tvTareweight);
         btnIssue = findViewById(R.id.btnIssue);
-
+        tvTap = findViewById(R.id.tvTaprfid);
         dbc = new dbclass(rfid_issue.this);
-
+        Button btnReset = findViewById(R.id.btnReset);
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this);
         if (nfcAdapter == null) {
@@ -105,19 +109,58 @@ public class rfid_issue extends AppCompatActivity {
             }
         });
 
+        btnReset.setOnClickListener(v -> {
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Reset")
+                    .setMessage("Are you sure you want to reset?")
+                    .setIcon(R.drawable.ic_warning)
+                    .setCancelable(false)
+
+                    .setPositiveButton("Yes, Reset", (dialog, which) -> {
+
+                        clearfields();
+                        toast("Reset done");
+                        btnIssue.setEnabled(true);
+                        btnIssue.setAlpha(1f);
+                        btnIssue.setText("Issue RFID Card");
+                        isReadyToWrite = false;
+                    })
+
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+
+                    .show();
+        });
+
         btnIssue.setOnClickListener(v -> {
+            Log.e("selectedAsset.rfid_uid",selectedAsset.rfid_uid);
             if (selectedAsset == null) {
                 toast("Select vehicle first");
+                tvTap.setVisibility(View.VISIBLE);
+                tvTap.setText("Select vehicle first");
                 return;
             }
 
-            if (selectedAsset.rfid_uid != null && !selectedAsset.rfid_uid.isEmpty()) {
-                //toast("RFID already issued.");
-                //return;
+            if (selectedAsset.rfid_uid != null && !selectedAsset.rfid_uid.isEmpty() && !selectedAsset.rfid_uid.equals("null")) {
+                toast("RFID already issued.");
+                tvTap.setVisibility(View.VISIBLE);
+                tvTap.setText("RFID already issued.");
+                btnIssue.setEnabled(false);
+                btnIssue.setAlpha(0.5f); // faded look
+
+                return;
             }
 
             toast("Tap RFID card...");
             isReadyToWrite = true;
+            btnIssue.setEnabled(false);
+            btnIssue.setAlpha(0.5f); // faded look
+
+            tvTap.setVisibility(View.VISIBLE);
+            tvTap.setText("📡 Tap RFID card on back panel");
+
+            // Start timeout
+            startTimeout();
         });
 
         pendingIntent = PendingIntent.getActivity(
@@ -131,10 +174,32 @@ public class rfid_issue extends AppCompatActivity {
 
     }
 
+    private void startTimeout() {
+
+        timeoutRunnable = () -> {
+
+            if (isReadyToWrite) {
+
+                toast("⏱️ Timeout! No card detected");
+
+                resetRFIDUI();
+            }
+        };
+
+        handler.postDelayed(timeoutRunnable, 15000); // 20 sec
+    }
+
+    private void cancelTimeout() {
+        if (timeoutRunnable != null) {
+            handler.removeCallbacks(timeoutRunnable);
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
-        if (nfcAdapter != null) {
+        if (nfcAdapter != null)
+        {
             nfcAdapter.enableForegroundDispatch(this, pendingIntent, null, null);
         }
     }
@@ -142,7 +207,8 @@ public class rfid_issue extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if (nfcAdapter != null) {
+        if (nfcAdapter != null)
+        {
             nfcAdapter.disableForegroundDispatch(this);
         }
     }
@@ -201,7 +267,7 @@ public class rfid_issue extends AppCompatActivity {
             a.ownerName = o.getString("owner_name");
             a.tare_weight = o.optString("tare_weight", "");
             a.tare_weight_wb = o.optString("tare_weight_wb", "");
-            a.rfid_uid = o.optString("rfid_uid", null);
+            a.rfid_uid = o.optString("rfid_uid", "");
             a.assetType = o.getString("asset_type");
             a.vendor_id = o.optInt("vendor_id");
             a.tare_weight_time = o.optString("tare_weight_time", "");
@@ -233,7 +299,7 @@ public class rfid_issue extends AppCompatActivity {
                         a.insurance_to = toDate;
                     }
 
-                    else if (docName.equalsIgnoreCase("ROADTAX")) {
+                    else if (docName.equalsIgnoreCase("ROAD TAX")) {
                         a.roadtax_from = fromDate;
                         a.roadtax_to = toDate;
                     }
@@ -268,13 +334,13 @@ public class rfid_issue extends AppCompatActivity {
 
         if (selectedAsset.rfid_uid == null || selectedAsset.rfid_uid.equals("null") || selectedAsset.rfid_uid.isEmpty()) {
             tvRFID.setText("RFID: Not Issued");
-
+            btnIssue.setEnabled(true);
         } else {
             tvRFID.setText("RFID: " + selectedAsset.rfid_uid);
             btnIssue.setEnabled(false);
             toast("RFID already issued. Apply new card.");
         }
-        btnIssue.setEnabled(true);
+
     }
 
    private void clearfields()
@@ -285,6 +351,9 @@ public class rfid_issue extends AppCompatActivity {
        tvTareweight.setText("");
        tvType.setText("");
        tvRFID.setText("");
+       selectedAsset=null;
+       tvTap.setVisibility(View.GONE);
+       etVehicleNo.setText("");
    }
 
     // ---------------- AFTER RFID WRITE ------------------
@@ -329,15 +398,14 @@ public class rfid_issue extends AppCompatActivity {
                        dbc.showScrollableErrorDialog(rfid_issue.this, "Success", message);
                         clearfields();
                         fetchAssetMaster("");
-                        showAssetDetails();
+                        etVehicleNo.setText("");
+                        //showAssetDetails();
 
                     });
 
                 } else {
                     runOnUiThread(() ->dbc.showScrollableErrorDialog(rfid_issue.this, "Error", message));
                 }
-
-
 
             } catch (Exception e) {
                 runOnUiThread(() -> toast("RFID sync failed"+e.getMessage()));
@@ -346,28 +414,25 @@ public class rfid_issue extends AppCompatActivity {
         }).start();
     }
 
-    // ---------------- UI HELPERS ------------------
-    private void showScrollableDialog(String msg) {
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Server Response")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .create();
-        dialog.show();
-
-        ((TextView) dialog.findViewById(android.R.id.message))
-                .setMovementMethod(new ScrollingMovementMethod());
-    }
-
     private void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
+    private void resetRFIDUI() {
 
+        isReadyToWrite = false;
+
+        btnIssue.setEnabled(true);
+        btnIssue.setAlpha(1f);
+        btnIssue.setText("Issue RFID Card");
+
+        tvTap.setVisibility(View.GONE);
+    }
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
 
         if(isReadyToWrite)
         {
+            cancelTimeout();
             Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             byte[] uid = tag.getId();   // 🔥 RFID UID
             rfid_card_number = dbc.bytesToHex(uid);
@@ -389,7 +454,7 @@ public class rfid_issue extends AppCompatActivity {
                 pageData = dbc.readPage(nfca, 06);
                 String asset_num_06 = new String(pageData, StandardCharsets.UTF_8).trim();
 
-                asset_number = "";//asset_num_04+asset_num_05+asset_num_06;
+                asset_number = asset_num_04+asset_num_05+asset_num_06;
 
                 if(asset_number.trim().isEmpty())
                 {
@@ -466,10 +531,12 @@ public class rfid_issue extends AppCompatActivity {
                     }else
                     {
                        dbc.showScrollableErrorDialog(rfid_issue.this, "Error", "Failed to write card.");
+
                     }
                 }else
                 {
                    dbc.showScrollableErrorDialog(rfid_issue.this, "Error", "This RFID card is already issued to the vehicle number\n"+asset_number.trim()+"\nIf you want to reuse it again then please clear the card first and then use this option to rewrite the card again.");
+
                 }
                 Log.e("NFC", "Tag detected");
             } catch (Exception e) {
@@ -485,6 +552,13 @@ public class rfid_issue extends AppCompatActivity {
                    dbc.showScrollableErrorDialog(rfid_issue.this, "Error", ignored.getMessage());
                 }
             }
+            btnIssue.setEnabled(true);
+            btnIssue.setAlpha(1f);
+            isReadyToWrite = false;
+            tvTap.setVisibility(View.GONE);
+        }else
+        {
+            tvTap.setText("Please select the vehicle from the dropdown list and then press the Issue RFID card button to write the card");
         }
 
     }

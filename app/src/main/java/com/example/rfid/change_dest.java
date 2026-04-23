@@ -25,7 +25,7 @@ import android.widget.TextView;
 
 import java.util.List;
 
-public class change_dest extends AppCompatActivity {
+public class change_dest extends activity_base {
     AutoCompleteTextView old_route,new_route1, new_route2, new_route3, new_route4;
     TextView txtStatus;
     EditText editMessage;

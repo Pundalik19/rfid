@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -501,12 +502,13 @@ public class dbclass extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor cursor = db.rawQuery(
-                "SELECT ml.id,ml.u_id, ml.location_id,ml.int_tare_validity_days,ml.ext_tare_validity_days,m.machine_id,m.date_time,sp.machine_working_id,ore_id FROM mobile_logins ml LEFT JOIN machinery m ON m.id = (SELECT MAX(id) FROM machinery)  LEFT JOIN screening_plant sp ON sp.id = (SELECT MAX(id) FROM screening_plant) WHERE ml.status=1 AND ml.u_id IS NOT NULL",
+                "SELECT ml.id,ml.u_id,ml.login, ml.location_id,ml.int_tare_validity_days,ml.ext_tare_validity_days,m.machine_id,m.date_time,sp.machine_working_id,ore_id FROM mobile_logins ml LEFT JOIN machinery m ON m.id = (SELECT MAX(id) FROM machinery)  LEFT JOIN screening_plant sp ON sp.id = (SELECT MAX(id) FROM screening_plant) WHERE ml.status=1 AND ml.u_id IS NOT NULL",
                 null
         );
 
         if (cursor != null && cursor.moveToFirst()) {
 
+            String login = cursor.getString(cursor.getColumnIndexOrThrow("login"));
             String tid = cursor.getString(cursor.getColumnIndexOrThrow("id"));
             String uid = cursor.getString(cursor.getColumnIndexOrThrow("u_id"));
             Long locationId = cursor.getLong(cursor.getColumnIndexOrThrow("location_id"));
@@ -524,6 +526,7 @@ public class dbclass extends SQLiteOpenHelper {
             );
 
             SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("login", login);
             editor.putString("TID", tid);
             editor.putString("UID", uid);
             editor.putLong("LOCATION_ID", locationId);
@@ -1145,8 +1148,9 @@ public class dbclass extends SQLiteOpenHelper {
         tvValue.setText(value == null ? "--" : value);
 
         // ✅ Special Highlight for Sublocation
-        if (label != null && label.equalsIgnoreCase("sublocation")) {
-
+        if (label != null && label.equalsIgnoreCase("Sublocation")) {
+            tvLabel.setVisibility(View.GONE);
+            tvLabel.setText("");
             tvLabel.setTextSize(20);
             tvValue.setTextSize(20);
 
@@ -1224,6 +1228,26 @@ public class dbclass extends SQLiteOpenHelper {
         long targetMillis = baseMillis + (seconds * 1000);
 
         return new Date(targetMillis);
+    }
+
+    public static int bytesToInt(byte[] data, int start, int length) {
+
+        int value = 0;
+
+        // Build unsigned value
+        for (int i = start; i < start + length; i++) {
+            value = (value << 8) | (data[i] & 0xFF);
+        }
+
+        // 🔥 Sign extension (for signed values)
+        int signBit = 1 << (length * 8 - 1);
+
+        if ((value & signBit) != 0) {
+            value -= (1 << (length * 8));
+        }
+
+        Log.e("bytesToInt", " " + value);
+        return value;
     }
 
     public static String bytesToString(byte[] data, int start, int length) {
@@ -1512,13 +1536,13 @@ public class dbclass extends SQLiteOpenHelper {
         return list;
     }
 
-    void onRfidTapped(CardView cardDetails, ContentValues values, String error, Handler handler, Runnable hideRunnable, LinearLayout detailsContainer, Context context) {
+    void onRfidTapped(CardView cardDetails, LinkedHashMap<String, Object> card_details_map, String error, Handler handler, Runnable hideRunnable, LinearLayout detailsContainer, Context context) {
 
         handler.removeCallbacks(hideRunnable);
 
         detailsContainer.removeAllViews();
 
-        for (Map.Entry<String, Object> entry : values.valueSet())
+        for (Map.Entry<String, Object> entry : card_details_map.entrySet())
         {
 
             String key = entry.getKey();

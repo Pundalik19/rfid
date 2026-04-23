@@ -23,7 +23,7 @@ import android.widget.TextView;
 import java.util.Date;
 import java.util.List;
 
-public class screening_plant extends AppCompatActivity {
+public class screening_plant extends activity_base {
     int screening_machine_id = -1;
     int oreId = -1;
     int typeId = -1;

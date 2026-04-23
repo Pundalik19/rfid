@@ -22,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 
 import android.graphics.Color;
@@ -98,7 +99,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends activity_base {
     Button syncbutton;
 
     int trip_status_read;
@@ -163,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
         detailsContainer = findViewById(R.id.detailsContainer);
 
         dbcl = new dbclass(MainActivity.this);
-
+        dbcl.trustEveryone();
         if (dbcl.isMobileLoginEmpty(MainActivity.this)) {
             Intent intent = new Intent(this, activity_login.class);
             startActivity(intent);
@@ -364,7 +365,7 @@ public class MainActivity extends AppCompatActivity {
         Log.e("NFC","Tag detected");
         //clearUltralight(tag);
         Drawable originalBg = background_main.getBackground();
-        ContentValues card_details = new ContentValues();
+
         if(writeRequested)
         {
 
@@ -423,6 +424,8 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d("NFC_READ", "trip_status_read pageData" + trip_status_read + " " + Arrays.toString(pageData) + " tripsheet_no_last2 " + tripsheet_no_last2);
 
+                pageData = dbcl.readPage(nfca, 10);
+                int truck_vendor_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
 
                 pageData = dbcl.readPage(nfca, 34);
                 int src_mob_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
@@ -475,12 +478,16 @@ public class MainActivity extends AppCompatActivity {
                 int dest_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
                 String dest_time_card = null;
                 Log.e("dest_sec_card", " " + dest_sec_card);
-                card_details.put("Card No", rfid_card);
-                card_details.put("Vehicle No", asset_number);
-                card_details.put("Asset Type", asset_type_display);
-                card_details.put("Src Tare Weight", tare_wt_card);
-                card_details.put("Src Tare Weight Time", dbcl.db_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card)));
 
+                LinkedHashMap<String, Object> card_details_map = new LinkedHashMap<>();
+                card_details_map.put("Vehicle No", asset_number);
+                card_details_map.put("Asset Type", asset_type_display);
+                card_details_map.put("Card No", rfid_card);
+                card_details_map.put("Trip Status",  dbcl.getTripStatusText(trip_status_read));
+                card_details_map.put("Src Tare Weight", tare_wt_card);
+                card_details_map.put("Src Tare Weight Time", dbcl.display_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card)));
+
+                trip_status_read =1;
                 if (asset_type == 1)
                 {
 
@@ -501,7 +508,7 @@ public class MainActivity extends AppCompatActivity {
                         closing_trip_num_card = closing_trip_num_01 + closing_trip_num_02 + closing_trip_num_03 + tripsheet_no_last2;
                         Log.d("NFC_READ", "closing_trip_num_card " + closing_trip_num_card + " ");
 
-                        card_details.put("Trip No", closing_trip_num_card);
+                        card_details_map.put("Trip No", closing_trip_num_card);
 
 
                         pageData = dbcl.readPage(nfca, 27);
@@ -512,22 +519,22 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("NFC_READ", "dest_subloc_id_trip " + dest_subloc_id_trip + " " + sublocationId);
 
                         pageData = dbcl.readPage(nfca, 18);
-                        int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
-
+                        //int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+                        int HSD = dbcl.bytesToInt(pageData, 0, 3);
                         Double hsd_card = HSD / 100.0;
-
                         hsd_card = hsd_card + dbcl.route_consumption(route_id_card);
 
                         String HSD_BAL = String.valueOf(hsd_card);
 
-                        long scaledValue = Math.round(hsd_card * 100);
+                        long scaledValue = Math.round(hsd_card * 100.0);
+
                         String hsd_card_str = String.valueOf(scaledValue);
 
-                        Log.e("HSD_BAL", " " + HSD_BAL+" "+hsd_card_str);
+                        Log.e("hsd_card_str",HSD_BAL+" "+hsd_card_str);
 
-                        card_details.put("Source Location", dbcl.get_subloc_name(src_subloc_id_trip));
-                        card_details.put("Destination Location", dbcl.get_subloc_name(dest_subloc_id_trip));
-                        card_details.put("Route", dbcl.get_route_name(route_id_card));
+                        card_details_map.put("Source Location", dbcl.get_subloc_name(src_subloc_id_trip));
+                        card_details_map.put("Destination Location", dbcl.get_subloc_name(dest_subloc_id_trip));
+                        card_details_map.put("Route", dbcl.get_route_name(route_id_card));
 
                         pageData = dbcl.readPage(nfca, 28);
                         int wb_src_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
@@ -585,7 +592,7 @@ public class MainActivity extends AppCompatActivity {
                         pageData = dbcl.readPage(nfca, 38);
                         int screening_plant_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
                         int plant_input_product_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
-
+                        //error = "testing";
                         //dest_subloc_id_trip= (int) sublocationId;
                         if ((dest_subloc_id_trip == sublocationId || route_id_card == old_route_id) && "".equals(error)) {
 
@@ -667,8 +674,10 @@ public class MainActivity extends AppCompatActivity {
                                         trip_close.put("machine_id", machine_id_card);
                                         trip_close.put("screening_plant_id", screening_plant_id_card);
                                         trip_close.put("plant_input_product_id", plant_input_product_id_card);
+                                        trip_close.put("truck_vendor_id", truck_vendor_id_card);
+                                        trip_close.put("POS_UP_BIT", 1);
 
-                                        if (saveTripsheet(finalClosing_trip_num_card, trip_close)) {
+                                        /*if (saveTripsheet(finalClosing_trip_num_card, trip_close)) {
                                             Toast.makeText(this, "Tripsheet closed successfully", Toast.LENGTH_SHORT).show();
                                            dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Tripsheet closed successfully");
 
@@ -678,7 +687,7 @@ public class MainActivity extends AppCompatActivity {
                                             //background_main.setBackgroundColor(Color.RED);
                                            dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to close tripsheet");
 
-                                        }
+                                        }*/
                                     }
 
                                 });
@@ -897,7 +906,8 @@ public class MainActivity extends AppCompatActivity {
                                             trip_close.put("machine_id", machine_id);
                                             trip_close.put("screening_plant_id", screening_plant_id);
                                             trip_close.put("plant_input_product_id", plant_input_product_id);
-
+                                            trip_close.put("truck_vendor_id", truck_vendor_id_card);
+                                            trip_close.put("POS_UP_BIT", 1);
                                             trip_close.putNull("wb_src_time");
                                             trip_close.putNull("wb_src_gross_login");
                                             trip_close.putNull("src_tare_wt_time");
@@ -909,6 +919,7 @@ public class MainActivity extends AppCompatActivity {
                                             trip_close.putNull("src_gross_wt");
                                             trip_close.putNull("src_tare_wt");
                                             trip_close.putNull("dest_gross_wt");
+                                            trip_close.putNull("dest_tare_wt");
                                             trip_close.putNull("dest_tare_wt");
 
                                             Log.e("srctime", srctime + " " + tripstarttime);
@@ -943,7 +954,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    card_details.put("Trip Status", dbcl.getTripStatusText(trip_status_read));
+                    card_details_map.put("Trip Status", dbcl.getTripStatusText(trip_status_read));
                 }else if (asset_type == 2)
                 {
                     nfca.close();
@@ -1009,7 +1020,7 @@ public class MainActivity extends AppCompatActivity {
 
                     }).start();
                 }
-                dbcl.onRfidTapped(cardDetails,card_details,error,handler,hideRunnable,detailsContainer,MainActivity.this);
+                dbcl.onRfidTapped(cardDetails,card_details_map,error,handler,hideRunnable,detailsContainer,MainActivity.this);
             } catch (Exception e)
             {
                 e.printStackTrace();
@@ -1132,12 +1143,19 @@ public class MainActivity extends AppCompatActivity {
     public void showSetupDetails(Cursor cursor,Context context) {
 
         CardView cardSetupDetails = findViewById(R.id.cardSetupDetails);
+        CardView cardSetupDetails1 = findViewById(R.id.cardSetupDetails1);
+        CardView cardSetupDetails2 = findViewById(R.id.cardSetupDetails2);
         LinearLayout container = findViewById(R.id.setupDetailsContainer);
+        LinearLayout container1 = findViewById(R.id.setupDetailsContainer1);
+        LinearLayout container2 = findViewById(R.id.setupDetailsContainer2);
 
         container.removeAllViews();
+        container1.removeAllViews();
+        container2.removeAllViews();
 
         if (cursor != null && cursor.moveToFirst()) {
 
+            dbcl.addRow(context,container, "This Sublocation","");
             dbcl.addRow(context,container, "Sublocation", cursor.getString(cursor.getColumnIndexOrThrow("sublocation_name")));
             dbcl.addRow(context,container, "Vendor", cursor.getString(cursor.getColumnIndexOrThrow("company_name")));
             dbcl.addRow(context,container, "Ore", cursor.getString(cursor.getColumnIndexOrThrow("description")));
@@ -1149,15 +1167,19 @@ public class MainActivity extends AppCompatActivity {
             //dbcl.addRow(context,container, "Route2", cursor.getString(cursor.getColumnIndexOrThrow("new_route2")));
             //dbcl.addRow(context,container, "Route3", cursor.getString(cursor.getColumnIndexOrThrow("new_route3")));
             //dbcl.addRow(context,container, "Route4", cursor.getString(cursor.getColumnIndexOrThrow("new_route4")));
-            dbcl.addRow(context,container, "Machine", cursor.getString(cursor.getColumnIndexOrThrow("registration_no")));
-            dbcl.addRow(context,container, "Machine Start Time", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("machinery_st_tm"))));
-            dbcl.addRow(context,container, "Screening plant", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("screeningplant"))));
-            dbcl.addRow(context,container, "Plant input product ", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("inputore"))));
+            dbcl.addRow(context,container1, "Machine", cursor.getString(cursor.getColumnIndexOrThrow("registration_no")));
+            dbcl.addRow(context,container1, "Machine Start Time", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("machinery_st_tm"))));
+            dbcl.addRow(context,container2, "Screening plant", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("screeningplant"))));
+            dbcl.addRow(context,container2, "Plant input product ", dbcl.display_format_date_time(cursor.getString(cursor.getColumnIndexOrThrow("inputore"))));
 
             cardSetupDetails.setVisibility(View.VISIBLE);
+            cardSetupDetails1.setVisibility(View.VISIBLE);
+            cardSetupDetails2.setVisibility(View.VISIBLE);
             cursor.close();
         } else {
             cardSetupDetails.setVisibility(View.GONE);
+            cardSetupDetails1.setVisibility(View.GONE);
+            cardSetupDetails2.setVisibility(View.GONE);
         }
     }
 

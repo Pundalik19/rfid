@@ -20,7 +20,7 @@ import android.widget.Toast;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class activity_rfid_tap extends AppCompatActivity {
+public class activity_rfid_tap extends activity_base {
 
     private NfcAdapter nfcAdapter;
     private PendingIntent pendingIntent;
