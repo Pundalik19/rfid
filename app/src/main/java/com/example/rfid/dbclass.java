@@ -689,14 +689,15 @@ public class dbclass extends SQLiteOpenHelper {
         return dest_subloc;
     }
 
-    public void markTripsheetsUploaded(List<Long> ids,Context context) {
-        dbclass dbs = new dbclass(context);
-        SQLiteDatabase db = dbs.getWritableDatabase();
+    /*public void markTripsheetsUploaded(List<String> ids) {
+
+        SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues cv = new ContentValues();
         cv.put("POS_UP_BIT", 0);
+        cv.put("updated_at", db_format_date_time(new Date()));
 
-        for (Long id : ids) {
+        for (String id : ids) {
             db.update(
                     "tripsheets",
                     cv,
@@ -704,10 +705,56 @@ public class dbclass extends SQLiteOpenHelper {
                     new String[]{String.valueOf(id)}
             );
         }
-    }
+    }*/
 
-    public boolean uploadTripsheets(JSONArray tripsheetsJson,String urlstr,String type) {
+    public String markTripsheetsUploaded(List<String> ids,String tablename) {
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        StringBuilder errors = new StringBuilder();
+        String column="";
+        if("item_issues".equals(tablename))
+        {
+            tablename = "hsd_transactions";
+            column="id";
+        }else
+        {
+            tablename = "tripsheets";
+            column="tripsheet_no";
+        }
+
+        ContentValues cv = new ContentValues();
+        cv.put("POS_UP_BIT", 0);
+        cv.put("updated_at", db_format_date_time(new Date()));
+
+        for (String id : ids) {
+
+            try {
+                int rows = db.update(
+                        tablename,
+                        cv,
+                        column+" = ?",
+                        new String[]{id}
+                );
+
+                // ❌ Not found = failure
+                if (rows == 0) {
+                    errors.append("ID ").append(id).append(" not found\n");
+                }
+
+            } catch (Exception e) {
+                errors.append("ID ").append(id)
+                        .append(" failed: ")
+                        .append(e.getMessage())
+                        .append("\n");
+            }
+        }
+
+        return errors.length() == 0 ? "" : errors.toString();
+    }
+    public String uploadTripsheets(JSONArray tripsheetsJson,String urlstr,String type)
+    {
         trustEveryone();
+        String error="";
         HttpURLConnection conn = null;
         Log.e("uploadTripsheets","uploadTripsheets");
         try {
@@ -751,16 +798,56 @@ public class dbclass extends SQLiteOpenHelper {
                 br.close();
 
                 Log.e("API_RESPONSE", response.toString());
-                return true;
+
+                JSONObject obj = new JSONObject(response.toString());
+
+                if (obj.getBoolean("status"))
+                {
+
+                    JSONArray results = obj.getJSONArray("results");
+                    List<String> uploadedIds = new ArrayList<>();
+                    for (int i = 0; i < results.length(); i++)
+                    {
+
+                        JSONObject item = results.getJSONObject(i);
+
+                        String index = item.getString("index");   // 👉 M0162604230026
+                        boolean status = item.getBoolean("status");
+                        String message = item.getString("message");
+
+                        if (status)
+                        {
+                            uploadedIds.add(index);
+                        }else
+                        {
+                            error+=index+" - "+message+"\n";
+                        }
+                    }
+
+                    error += markTripsheetsUploaded(uploadedIds,type);
+
+                    if(!error.isEmpty())
+                    {
+                        return error;
+                    }else
+                    {
+                        return "success";
+                    }
+
+                }else
+                {
+                    return response.toString();
+                }
             }
 
         } catch (Exception e) {
             Log.e("UPLOAD_ERROR", e.getMessage(), e);
+            error = e.getMessage();
         } finally {
             if (conn != null) conn.disconnect();
         }
 
-        return false;
+        return error;
     }
 
     public void trustEveryone() {
@@ -1238,7 +1325,6 @@ public class dbclass extends SQLiteOpenHelper {
         for (int i = start; i < start + length; i++) {
             value = (value << 8) | (data[i] & 0xFF);
         }
-
         // 🔥 Sign extension (for signed values)
         int signBit = 1 << (length * 8 - 1);
 

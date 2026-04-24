@@ -70,7 +70,7 @@ public class xbowser extends activity_base {
     LinearLayout layoutQtySection;
     EditText editTextQty;
     Button btnSave,btnReset;
-    String Asset_id="";;
+    int Asset_id=0;
 
     double hsdbalasset=0.00;
     @Override
@@ -174,7 +174,7 @@ public class xbowser extends activity_base {
                             hsdqty.setText(dbcl.getBowserStock(bowser_stock_id));
                             // reset input
                             editTextQty.setText("");
-                            Asset_id="";
+                            Asset_id=0;
                             hsdbalasset=0.00;
                             showScrollableErrorDialog(this, "Success", "Transaction saved successfully");
                             layoutQtySection.setVisibility(View.GONE);
@@ -334,7 +334,7 @@ public class xbowser extends activity_base {
         LinkedHashMap<String, Object> card_details = new LinkedHashMap<>();
 
         try{
-            Asset_id="";
+            Asset_id=0;
             hsdbalasset = 0.00;
             NfcA nfca = NfcA.get(tag);
             nfca.connect();
@@ -356,17 +356,17 @@ public class xbowser extends activity_base {
             String truckid = dbcl.getAssetId_fromdb(asset_number);
 
             pageData = dbcl.readPage(nfca, 11);
-            Asset_id  = dbcl.bytesToString(pageData, 0, 3);
-            int asset_status = Integer.parseInt(dbcl.bytesToString(pageData, 3, 1));
+            Asset_id  = dbcl.bytesToInt(pageData, 0, 3);
+            int asset_status = dbcl.bytesToInt(pageData, 3, 1);
 
             Log.d("NFC_READ", "11 : asset number "+Asset_id+" "+asset_status);
 
             pageData = dbcl.readPage(nfca, 13);
-            int asset_type = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int gross_wt_capacity = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int asset_type = dbcl.bytesToInt(pageData, 0, 2);
+            int gross_wt_capacity = dbcl.bytesToInt(pageData, 2, 2);
 
             pageData = dbcl.readPage(nfca, 18);
-            int sublocation_id = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+            int sublocation_id = dbcl.bytesToInt(pageData, 0, 2);
 
 
             String asset_type_display="";
@@ -388,14 +388,14 @@ public class xbowser extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 18);
-            int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+            int HSD = dbcl.bytesToInt(pageData, 0, 3);
 
             hsdbalasset = HSD/100.0;
 
             Log.e("HSD_BAL"," "+HSD+" "+hsdbalasset);
 
             pageData = dbcl.readPage(nfca, 22);
-            int HSDCARD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+            int HSDCARD = dbcl.bytesToInt(pageData, 0, 3);
 
             double qtyValue = HSDCARD / 100.0;   // 👈 important: 100.0 (not 100)
 

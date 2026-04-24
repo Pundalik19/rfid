@@ -168,14 +168,24 @@ public class sync extends activity_base {
                 return;
             }
 
-            boolean successup = db.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets") &&
-                                db.uploadTripsheets(hsdTransactions,ApiConfig.HSD_TRANSACTION_SAVE,"item_issues");
+            String successup_tripsheets = db.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
+            String successup_item_issues = db.uploadTripsheets(hsdTransactions,ApiConfig.HSD_TRANSACTION_SAVE,"item_issues");
             runOnUiThread(() -> {
-                if (successup) {
+                if ("success".equals(successup_tripsheets) && "success".equals(successup_item_issues) )
+                {
                     syncProgress.setProgress(100);
                     syncSubStatus.setText("Upload complete");
                     finishSync(true);
                 } else {
+                    if (!"success".equals(successup_tripsheets))
+                    {
+                        syncSubStatus.setText("Tripsheet upload failed\n");
+                    }
+                    if (!"success".equals(successup_item_issues))
+                    {
+                        syncSubStatus.append("HSD transactions upload failed");
+                    }
+                    Log.e("successup_tripsheets",successup_tripsheets+" "+successup_item_issues);
                     finishSync(false);
                 }
             });

@@ -167,6 +167,7 @@ public class MainActivity extends activity_base {
         dbcl.trustEveryone();
         if (dbcl.isMobileLoginEmpty(MainActivity.this)) {
             Intent intent = new Intent(this, activity_login.class);
+            intent.putExtra("target", "SYNC");
             startActivity(intent);
             finish();
             return;
@@ -195,8 +196,11 @@ public class MainActivity extends activity_base {
 
 
 
-        btnSetup.setOnClickListener(v ->
-                startActivity(new Intent(this, activity_login.class)));
+        btnSetup.setOnClickListener(v -> {
+            Intent i = new Intent(this, activity_login.class);
+            i.putExtra("target", "SETUP"); // 👈 tell login where to go
+            startActivity(i);
+        });
         syncbutton.setOnClickListener(v ->
                 startActivity(new Intent(this, sync.class)));
         btnIssuerfid.setOnClickListener(v ->
@@ -289,28 +293,19 @@ public class MainActivity extends activity_base {
                 return;
             }
 
-            boolean successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
+            String successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
 
-            if (successup) {
-                List<Long> uploadedIds = new ArrayList<>();
-
-                for (int i = 0; i < tripsheets.length(); i++) {
-                    try {
-                        uploadedIds.add(tripsheets.getJSONObject(i).getLong("id"));
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                dbcl.markTripsheetsUploaded(uploadedIds,MainActivity.this);
-
+            if ("success".equals(successup))
+            {
                 runOnUiThread(() ->
                         Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show()
                 );
-            } else {
+            } else
+            {
                 runOnUiThread(() ->
-                        Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Upload failed\n"+successup, Toast.LENGTH_SHORT).show()
                 );
+                Log.e("successup",successup);
             }
 
         }).start();
@@ -419,23 +414,23 @@ public class MainActivity extends activity_base {
                 String truckid = dbcl.getAssetId_fromdb(asset_number);
 
                 pageData = dbcl.readPage(nfca, 25);
-                String tripsheet_no_last2 = new String(pageData, 0, 2);//bytesToString(pageData, 0, 2);
-                trip_status_read = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                String tripsheet_no_last2 = new String(pageData, 0, 2);
+                trip_status_read = dbcl.bytesToInt(pageData, 2, 2);
 
                 Log.d("NFC_READ", "trip_status_read pageData" + trip_status_read + " " + Arrays.toString(pageData) + " tripsheet_no_last2 " + tripsheet_no_last2);
 
                 pageData = dbcl.readPage(nfca, 10);
-                int truck_vendor_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                int truck_vendor_id_card = dbcl.bytesToInt(pageData, 0, 2);
 
                 pageData = dbcl.readPage(nfca, 34);
-                int src_mob_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+                int src_mob_id_card = dbcl.bytesToInt(pageData, 0, 2);
 
                 ContentValues trip_close = new ContentValues();
                 String now = null;
 
                 pageData = dbcl.readPage(nfca, 13);
-                int asset_type = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                int gross_wt_capacity = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                int asset_type = dbcl.bytesToInt(pageData, 0, 2);
+                int gross_wt_capacity = dbcl.bytesToInt(pageData, 2, 2);
 
                 String asset_type_display="";
                 if(asset_type==1)
@@ -458,7 +453,7 @@ public class MainActivity extends activity_base {
                 now = dbcl.db_format_date_time(new Date());
 
                 pageData = dbcl.readPage(nfca, 14);
-                long tare_wt_sec_card = Long.parseLong(dbcl.bytesToString(pageData, 0, 4));
+                long tare_wt_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                 String tare_wt_time_card;
                 Log.e("tare_wt_sec_card", " " + tare_wt_sec_card);
                 if (tare_wt_sec_card > 0) {
@@ -470,12 +465,12 @@ public class MainActivity extends activity_base {
                 }
 
                 pageData = dbcl.readPage(nfca, 15);
-                int tare_wt_wb_log_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                int tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                int tare_wt_wb_log_card = dbcl.bytesToInt(pageData, 0, 2);
+                int tare_wt_card = dbcl.bytesToInt(pageData, 2, 2);
 
 
                 pageData = dbcl.readPage(nfca, 35);
-                int dest_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                int dest_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                 String dest_time_card = null;
                 Log.e("dest_sec_card", " " + dest_sec_card);
 
@@ -487,7 +482,6 @@ public class MainActivity extends activity_base {
                 card_details_map.put("Src Tare Weight", tare_wt_card);
                 card_details_map.put("Src Tare Weight Time", dbcl.display_format_date_time(dbcl.date_time_FromSeconds(tare_wt_sec_card)));
 
-                trip_status_read =1;
                 if (asset_type == 1)
                 {
 
@@ -495,31 +489,25 @@ public class MainActivity extends activity_base {
                     {
                         String closing_trip_num_card = "";
                         pageData = dbcl.readPage(nfca, 22);
-                        Log.d("NFC_READ", "22  " + Arrays.toString(pageData));
                         String closing_trip_num_01 = new String(pageData, StandardCharsets.UTF_8).trim();
                         pageData = dbcl.readPage(nfca, 23);
-                        Log.d("NFC_READ", "23  " + Arrays.toString(pageData));
                         String closing_trip_num_02 = new String(pageData, StandardCharsets.UTF_8).trim();
                         pageData = dbcl.readPage(nfca, 24);
-                        Log.d("NFC_READ", "24  " + Arrays.toString(pageData));
                         String closing_trip_num_03 = new String(pageData, StandardCharsets.UTF_8).trim();
 
-
                         closing_trip_num_card = closing_trip_num_01 + closing_trip_num_02 + closing_trip_num_03 + tripsheet_no_last2;
-                        Log.d("NFC_READ", "closing_trip_num_card " + closing_trip_num_card + " ");
 
                         card_details_map.put("Trip No", closing_trip_num_card);
 
 
                         pageData = dbcl.readPage(nfca, 27);
-                        int desc_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int route_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int desc_id_card = dbcl.bytesToInt(pageData, 0, 2);
+                        int route_id_card = dbcl.bytesToInt(pageData, 2, 2);
                         int src_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card, "source_sublocation"));//fetching src sublocation
                         int dest_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card, "destination_sublocation"));//fetching desr sublocation
-                        Log.d("NFC_READ", "dest_subloc_id_trip " + dest_subloc_id_trip + " " + sublocationId);
 
                         pageData = dbcl.readPage(nfca, 18);
-                        //int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+
                         int HSD = dbcl.bytesToInt(pageData, 0, 3);
                         Double hsd_card = HSD / 100.0;
                         hsd_card = hsd_card + dbcl.route_consumption(route_id_card);
@@ -537,7 +525,7 @@ public class MainActivity extends activity_base {
                         card_details_map.put("Route", dbcl.get_route_name(route_id_card));
 
                         pageData = dbcl.readPage(nfca, 28);
-                        int wb_src_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        int wb_src_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                         String wb_src_time_card;
                         if (wb_src_sec_card > 0) {
                             wb_src_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_src_sec_card));
@@ -546,11 +534,11 @@ public class MainActivity extends activity_base {
                         }
 
                         pageData = dbcl.readPage(nfca, 29);
-                        int src_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int wb_src_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int src_gr_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+                        int wb_src_gr_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
                         pageData = dbcl.readPage(nfca, 30);
-                        int wb_dest_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        int wb_dest_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                         String wb_dest_time_card;
                         if (wb_dest_sec_card > 0) {
                             wb_dest_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(wb_dest_sec_card));
@@ -559,11 +547,11 @@ public class MainActivity extends activity_base {
                         }
 
                         pageData = dbcl.readPage(nfca, 31);
-                        int dest_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int wb_dest_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int dest_gr_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+                        int wb_dest_gr_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
                         pageData = dbcl.readPage(nfca, 32);
-                        int dest_tare_wt_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        int dest_tare_wt_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                         String dest_tare_wt_time_card;
                         if (dest_tare_wt_sec_card > 0) {
                             dest_tare_wt_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(dest_tare_wt_sec_card));
@@ -572,11 +560,11 @@ public class MainActivity extends activity_base {
                         }
 
                         pageData = dbcl.readPage(nfca, 33);
-                        int dest_tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int wb_dest_tare_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int dest_tare_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+                        int wb_dest_tare_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
                         pageData = dbcl.readPage(nfca, 36);
-                        int src_sec_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+                        int src_sec_card = dbcl.bytesToInt(pageData, 0, 4);
                         String src_time_card;
                         if (src_sec_card > 0) {
                             src_time_card = dbcl.db_format_date_time(dbcl.date_time_FromSeconds(src_sec_card));
@@ -586,12 +574,12 @@ public class MainActivity extends activity_base {
                         }
 
                         pageData = dbcl.readPage(nfca, 37);
-                        int vendor_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int machine_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int vendor_id_card = dbcl.bytesToInt(pageData, 0, 2);
+                        int machine_id_card = dbcl.bytesToInt(pageData, 2, 2);
 
                         pageData = dbcl.readPage(nfca, 38);
-                        int screening_plant_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int plant_input_product_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int screening_plant_id_card  = dbcl.bytesToInt(pageData, 0, 2);
+                        int plant_input_product_id_card  = dbcl.bytesToInt(pageData, 2, 2);
                         //error = "testing";
                         //dest_subloc_id_trip= (int) sublocationId;
                         if ((dest_subloc_id_trip == sublocationId || route_id_card == old_route_id) && "".equals(error)) {
@@ -677,17 +665,17 @@ public class MainActivity extends activity_base {
                                         trip_close.put("truck_vendor_id", truck_vendor_id_card);
                                         trip_close.put("POS_UP_BIT", 1);
 
-                                        /*if (saveTripsheet(finalClosing_trip_num_card, trip_close)) {
+                                        if (saveTripsheet(finalClosing_trip_num_card, trip_close)) {
                                             Toast.makeText(this, "Tripsheet closed successfully", Toast.LENGTH_SHORT).show();
                                            dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Tripsheet closed successfully");
-
+                                            upload_data_server();
                                             trip_status_read = 2;
                                         } else {
                                             Toast.makeText(this, "Failed to close tripsheet", Toast.LENGTH_SHORT).show();
                                             //background_main.setBackgroundColor(Color.RED);
                                            dbcl.showScrollableErrorDialog(MainActivity.this, "Error", "Failed to close tripsheet");
 
-                                        }*/
+                                        }
                                     }
 
                                 });
@@ -755,8 +743,8 @@ public class MainActivity extends activity_base {
 
 
                         pageData = dbcl.readPage(nfca, 11);
-                        String Asset_id = dbcl.bytesToString(pageData, 0, 3);
-                        int asset_status = Integer.parseInt(dbcl.bytesToString(pageData, 3, 1));
+                        int Asset_id = dbcl.bytesToInt(pageData, 0, 3);
+                        int asset_status = dbcl.bytesToInt(pageData, 3, 1);
 
                         Log.d("NFC_READ", "11 : asset number " + Asset_id + " " + asset_status);
 
@@ -774,12 +762,12 @@ public class MainActivity extends activity_base {
                         Date today = todayCal.getTime();
 
                         pageData = dbcl.readPage(nfca, 16);
-                        int ins_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int rdt_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int ins_val_seconds = dbcl.bytesToInt(pageData, 0, 2);
+                        int rdt_val_seconds = dbcl.bytesToInt(pageData, 2, 2);
 
                         pageData = dbcl.readPage(nfca, 17);
-                        int fit_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-                        int puc_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+                        int fit_val_seconds = dbcl.bytesToInt(pageData, 0, 2);
+                        int puc_val_seconds = dbcl.bytesToInt(pageData, 2, 2);
 
                         if (ins_val_seconds > 0)
                         {
@@ -931,6 +919,7 @@ public class MainActivity extends activity_base {
                                                 Toast.makeText(this, "Tripsheet saved successfully", Toast.LENGTH_SHORT).show();
                                                dbcl.showScrollableErrorDialog(MainActivity.this, "Success", "Tripsheet saved successfully");
 
+                                                upload_data_server();
                                             } else {
                                                 Toast.makeText(this, "Failed to save tripsheet", Toast.LENGTH_SHORT).show();
 
@@ -1039,42 +1028,7 @@ public class MainActivity extends activity_base {
             dbclass dbs = new dbclass(this);
             SQLiteDatabase db = dbs.getWritableDatabase();
 
-            new Thread(() -> {
-
-                JSONArray tripsheets = dbcl.getTripsheetsForUpload(this);
-
-                if (tripsheets.length() == 0)
-                {
-                    Log.d("UPLOAD", "No pending tripsheets");
-                    return;
-                }
-
-                boolean successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
-
-                if (successup) {
-                    List<Long> uploadedIds = new ArrayList<>();
-
-                    for (int i = 0; i < tripsheets.length(); i++) {
-                        try {
-                            uploadedIds.add(tripsheets.getJSONObject(i).getLong("id"));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    dbcl.markTripsheetsUploaded(uploadedIds,this);
-
-                    runOnUiThread(() ->
-                            Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show()
-                    );
-                } else
-                {
-                    runOnUiThread(() ->
-                            Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show()
-                    );
-                }
-
-            }).start();
+            upload_data_server();
 
         }else if(clearRequested){
             dbcl.clearUltralight(tag);
@@ -1097,6 +1051,35 @@ public class MainActivity extends activity_base {
                 (byte) ((value >> 8) & 0xFF),
                 (byte) (value & 0xFF)
         };
+    }
+
+    public void upload_data_server()
+    {
+        new Thread(() -> {
+
+            JSONArray tripsheets = dbcl.getTripsheetsForUpload(this);
+
+            if (tripsheets.length() == 0)
+            {
+                Log.d("UPLOAD", "No pending tripsheets");
+                return;
+            }
+
+            String successup = dbcl.uploadTripsheets(tripsheets,ApiConfig.TRIPSHEET_SAVE,"tripsheets");
+
+            if ("success".equals(successup))
+            {
+                runOnUiThread(() ->
+                        Toast.makeText(this, "Tripsheets uploaded", Toast.LENGTH_SHORT).show()
+                );
+            } else
+            {
+                runOnUiThread(() ->
+                        Toast.makeText(this, "Upload failed", Toast.LENGTH_SHORT).show()
+                );
+            }
+
+        }).start();
     }
     
     public boolean  saveTripsheet(String tripsheetno,ContentValues trip_data)

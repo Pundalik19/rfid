@@ -42,12 +42,13 @@ public class activity_login extends AppCompatActivity {
     EditText etUsername, etPassword;
     MaterialButton btnLogin;
     dbclass db;
-
+    String targetScreen;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        targetScreen = getIntent().getStringExtra("target");
         db = new dbclass(this);
         db.trustEveryone();
         MaterialCardView card = findViewById(R.id.loginCard);
@@ -100,7 +101,8 @@ public class activity_login extends AppCompatActivity {
         if (isMobileLoginValid(username, password)) {
             startActivity(new Intent(this, rfidoops.class));
             finish();
-        } else {
+        } else
+        {
             authenticateFromServer(username, password);
         }
     }
@@ -148,7 +150,18 @@ public class activity_login extends AppCompatActivity {
                                         data.getString("ext_tare_validity_days")
                                 );
                             }
+                            Intent intent;
 
+                            if ("SYNC".equals(targetScreen)) {
+                                intent = new Intent(this, sync.class);
+                            } else if ("RFIDOPS".equals(targetScreen)) {
+                                intent = new Intent(this, rfidoops.class);
+                            } else {
+                                intent = new Intent(this, MainActivity.class); // default
+                            }
+
+                            startActivity(intent);
+                            finish();
                             startActivity(new Intent(this, sync.class));
                             finish();
 

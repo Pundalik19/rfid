@@ -234,8 +234,8 @@ public class rfidoops extends activity_base {
             String truckid = dbcl.getAssetId_fromdb(asset_number);
 
             pageData = dbcl.readPage(nfca, 11);
-            String Asset_id  = dbcl.bytesToString(pageData, 0, 3);
-            int asset_status = Integer.parseInt(dbcl.bytesToString(pageData, 3, 1));
+            int Asset_id  = dbcl.bytesToInt(pageData, 0, 3);
+            int asset_status = dbcl.bytesToInt(pageData, 3, 1);
 
             Log.d("NFC_READ", "11 : asset number "+Asset_id+" "+asset_status);
 
@@ -250,7 +250,7 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 12);
-            int card_iss_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int card_iss_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String card_iss_time_card;
             Log.e("card_iss_time_card"," "+card_iss_sec_card);
             if(card_iss_sec_card > 0)
@@ -263,8 +263,8 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 13);
-            int asset_type = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int gross_wt_capacity = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int asset_type = dbcl.bytesToInt(pageData, 0, 2);
+            int gross_wt_capacity = dbcl.bytesToInt(pageData, 2, 2);
 
             Log.d("NFC_READ", "11 : gross_wt_capacity"+gross_wt_capacity+" ");
 
@@ -287,7 +287,7 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 14);
-            long tare_wt_sec_card  = Long.parseLong(dbcl.bytesToString(pageData, 0, 4));
+            long tare_wt_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String tare_wt_time_card;
             Log.e("tare_wt_sec_card"," "+tare_wt_sec_card);
             if(tare_wt_sec_card > 0)
@@ -308,12 +308,12 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 15);
-            int tare_wt_wb_log_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int tare_wt_wb_log_card = dbcl.bytesToInt(pageData, 0, 2);
+            int tare_wt_card = dbcl.bytesToInt(pageData, 2, 2);
 
             pageData = dbcl.readPage(nfca, 16);
-            int ins_val_seconds  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int rdt_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int ins_val_seconds  = dbcl.bytesToInt(pageData, 0, 2);
+            int rdt_val_seconds = dbcl.bytesToInt(pageData, 2, 2);
 
             Date insurance_validity = null;
             Date rdtax_validity = null;
@@ -349,8 +349,8 @@ public class rfidoops extends activity_base {
             Log.d("NFC_READ", "25 : rdt_val_seconds "+rdt_val_seconds+" rdtax_validity"+rdtax_validity);
 
             pageData = dbcl.readPage(nfca, 17);
-            int fit_val_seconds  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int puc_val_seconds = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int fit_val_seconds  = dbcl.bytesToInt(pageData, 0, 2);
+            int puc_val_seconds = dbcl.bytesToInt(pageData, 2, 2);
 
             Date fitness_validity = null;
             Date puc_validity = null;
@@ -385,7 +385,7 @@ public class rfidoops extends activity_base {
 
 
             pageData = dbcl.readPage(nfca, 18);
-            /*int HSD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+            /*int HSD = dbcl.bytesToInt(pageData, 0, 3));
 
             String HSD_BAL = String.valueOf(HSD/100);
 
@@ -397,7 +397,7 @@ public class rfidoops extends activity_base {
             String HSD_BAL = String.valueOf(hsd_card);
 
             pageData = dbcl.readPage(nfca, 20);
-            int machinery_st_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int machinery_st_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String machinery_st_time_card;
             if(machinery_st_sec_card > 0)
             {
@@ -416,7 +416,7 @@ public class rfidoops extends activity_base {
             if(asset_type==4)
             {
                 pageData = dbcl.readPage(nfca, 22);
-                int HSDCARD = Integer.parseInt(dbcl.bytesToString(pageData, 0, 3));
+                int HSDCARD = dbcl.bytesToInt(pageData, 0, 3);
 
                 qtyValue = HSDCARD / 100.0;   // 👈 important: 100.0 (not 100)
             }
@@ -434,8 +434,8 @@ public class rfidoops extends activity_base {
 
 
             pageData = dbcl.readPage(nfca, 25);
-            String tripsheet_no_last2  = new String(pageData, 0, 2);//bytesToString(pageData, 0, 2);
-            trip_status_read  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            String tripsheet_no_last2  = new String(pageData, 0, 2);
+            trip_status_read  = dbcl.bytesToInt(pageData, 2, 2);
 
             String trip_status_display="";
             if(trip_status_read==1)
@@ -451,14 +451,14 @@ public class rfidoops extends activity_base {
             Log.d("NFC_READ", "closing_trip_num_card "+closing_trip_num_card+" ");
 
             pageData = dbcl.readPage(nfca, 27);
-            int desc_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int route_id_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int desc_id_card = dbcl.bytesToInt(pageData, 0, 2);
+            int route_id_card = dbcl.bytesToInt(pageData, 2, 2);
             int src_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card,"source_sublocation"));//fetching src sublocation
             int dest_subloc_id_trip = Integer.parseInt(dbcl.get_subloc_from_routeid(route_id_card,"destination_sublocation"));//fetching desr sublocation
             Log.d("NFC_READ", "dest_subloc_id_trip "+dest_subloc_id_trip+" "+sublocationId);
 
             pageData = dbcl.readPage(nfca, 28);
-            int wb_src_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int wb_src_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String wb_src_time_card;
             if(wb_src_sec_card > 0)
             {
@@ -468,11 +468,11 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 29);
-            int src_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int wb_src_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int src_gr_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+            int wb_src_gr_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
             pageData = dbcl.readPage(nfca, 30);
-            int wb_dest_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int wb_dest_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String wb_dest_time_card;
             if(wb_dest_sec_card > 0)
             {
@@ -482,11 +482,11 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 31);
-            int dest_gr_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int wb_dest_gr_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int dest_gr_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+            int wb_dest_gr_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
             pageData = dbcl.readPage(nfca, 32);
-            int dest_tare_wt_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int dest_tare_wt_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String dest_tare_wt_time_card;
             if(dest_tare_wt_sec_card > 0)
             {
@@ -496,12 +496,12 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 33);
-            int dest_tare_wt_card = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int wb_dest_tare_login_card = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int dest_tare_wt_card = dbcl.bytesToInt(pageData, 0, 2);
+            int wb_dest_tare_login_card = dbcl.bytesToInt(pageData, 2, 2);
 
 
             pageData = dbcl.readPage(nfca, 34);
-            int src_mob_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
+            int src_mob_id_card  = dbcl.bytesToInt(pageData, 0, 2);
 
             ContentValues trip_close = new ContentValues();
             String now = null;
@@ -509,13 +509,13 @@ public class rfidoops extends activity_base {
             now =  dbcl.db_format_date_time(new Date());
 
             pageData = dbcl.readPage(nfca, 35);
-            int dest_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int dest_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String dest_time_card = null;
             Log.e("dest_sec_card"," "+dest_sec_card);
 
 
             pageData = dbcl.readPage(nfca, 36);
-            int src_sec_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 4));
+            int src_sec_card  = dbcl.bytesToInt(pageData, 0, 4);
             String src_time_card;
             if(src_sec_card > 0)
             {
@@ -526,16 +526,16 @@ public class rfidoops extends activity_base {
             }
 
             pageData = dbcl.readPage(nfca, 37);
-            int vendor_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int machine_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int vendor_id_card  = dbcl.bytesToInt(pageData, 0, 2);
+            int machine_id_card  = dbcl.bytesToInt(pageData, 2, 2);
 
             pageData = dbcl.readPage(nfca, 38);
-            int scrreening_plant_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 0, 2));
-            int plant_input_product_id_card  = Integer.parseInt(dbcl.bytesToString(pageData, 2, 2));
+            int scrreening_plant_id_card  = dbcl.bytesToInt(pageData, 0, 2);
+            int plant_input_product_id_card  = dbcl.bytesToInt(pageData, 2, 2);
 
 
             cardData.put("Asset Number", asset_number);
-            cardData.put("Asset ID", Asset_id);
+            cardData.put("Asset ID", String.valueOf(Asset_id));
             cardData.put("Asset Status", asset_status_display);
             cardData.put("Asset Type", asset_type_display);
             cardData.put("Gross Weight Capacity", String.valueOf(gross_wt_capacity));

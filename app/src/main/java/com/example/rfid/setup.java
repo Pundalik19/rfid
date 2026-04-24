@@ -167,7 +167,7 @@ public class setup extends activity_base {
 
                 SpinnerItem item = (SpinnerItem) parent.getItemAtPosition(position);
                 sublocationId = item.id;
-                //loadRoutes(item.id,routeId);
+                loadRoutes(sublocationId,dest_subloc_id,routeId);
 
             }
 
